@@ -7,7 +7,7 @@ import DashboardPage from "./pages/DashboardPage";
 
 const allPageRouter = createBrowserRouter([
   {
-    path: "/login",
+    path: "/",
     element: <LoginPage />, // 👈 no layout, standalone page
   },
   {
