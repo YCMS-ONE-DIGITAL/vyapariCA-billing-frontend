@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import React from "react";
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (email === "admin@vyapari.com" && password === "12345") {
-      onLogin();
+      navigate("/dashboard");
     } else {
       alert("Invalid credentials!");
     }
