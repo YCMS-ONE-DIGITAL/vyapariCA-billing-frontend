@@ -3,12 +3,9 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 
 const allPageRouter = createBrowserRouter([
+
   {
     path: "/",
-    element: <Navigate to="/login" replace />,
-  },
-  {
-    path: "/login",
     element: <LoginPage />,
   },
   {
