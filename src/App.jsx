@@ -12,10 +12,7 @@ const allPageRouter = createBrowserRouter([
     path: "/dashboard",
     element: <DashboardPage />,
   },
-  {
-    path: "*",
-    element: <h1>404 Page Not Found</h1>,
-  },
+
 ]);
 
 function App() {
