@@ -1,26 +1,22 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import React from "react";
-
-import { useState } from "react";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 
 const allPageRouter = createBrowserRouter([
+
   {
     path: "/",
     element: <LoginPage />, // 👈 no layout, standalone page
   },
   {
     path: "/dashboard",
-    element: <DashboardPage />, // 👈 no layout, standalone page
+    element: <DashboardPage />,
   },
+
 ]);
 
 function App() {
-  return (
-    <div className="App">
-      <RouterProvider router={allPageRouter} />
-    </div>
-  );
+  return <RouterProvider router={allPageRouter} />;
 }
+
 export default App;
