@@ -10,6 +10,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
 import BillingPage from "./pages/BillingPage";
+import InvoicePage from "./pages/InvoicePage";
 import ReportsPage from "./pages/ReportsPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import ProductPage from "./pages/ProductPage";
@@ -46,6 +47,7 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <DashboardPage /> },
       { path: "clients", element: <ClientsPage /> },
       { path: "billing", element: <BillingPage /> },
+      { path: "Invoices",element: <InvoicePage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "products", element: <ProductPage /> },
       { path: "settings", element: <SettingsPage /> },
