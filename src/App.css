@@ -1,42 +1,50 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+import React from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+// Pages
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import ClientsPage from "./pages/ClientsPage";
+import BillingPage from "./pages/BillingPage";
+import ReportsPage from "./pages/ReportsPage";
+import ForgotPassword from "./pages/ForgotPassword";
+import ProductPage from "./pages/ProductPage";
+import SettingsPage from "./pages/SettingsPage";
+import Logout from "./pages/Logout";
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+// Layout
+import Layout from "./components/Layout";
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
+const router = createBrowserRouter([
+  
+  // LOGIN PAGE ONLY
+  {
+    path: "/",
+    element: <LoginPage />,
+  },
 
-.card {
-  padding: 2em;
-}
+  // Forgot password (NO sidebar)
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
 
-.read-the-docs {
-  color: #888;
+  // ALL PAGES WITH SIDEBAR (Inside Layout)
+  {
+    path: "/app",
+    element: <Layout />,
+    children: [
+      { path: "dashboard", element: <DashboardPage /> },
+      { path: "clients", element: <ClientsPage /> },
+      { path: "billing", element: <BillingPage /> },
+      { path: "reports", element: <ReportsPage /> },
+      { path: "products", element: <ProductPage /> },
+      { path: "settings", element: <SettingsPage /> },
+      { path: "logout", element: <Logout /> },
+    ],
+  },
+]);
+
+export default function App() {
+  return <RouterProvider router={router} />;
 }
