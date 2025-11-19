@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useOutletContext } from "react-router-dom";
 
 const ClientsPage = () => {
-  // 🔍 Get global search text from Layout.jsx
   const { searchQuery } = useOutletContext();
 
   const [clients, setClients] = useState([
@@ -27,26 +26,47 @@ const ClientsPage = () => {
     email: "",
     phone: "",
   });
+  const [editClientId, setEditClientId] = useState(null); // For edit
 
-  // Disable scroll when modal open
   useEffect(() => {
     document.body.style.overflow = showModal ? "hidden" : "auto";
   }, [showModal]);
 
-  const addClient = () => {
+  const addOrUpdateClient = () => {
     if (!newClient.name || !newClient.email || !newClient.phone) {
       alert("Please fill all fields");
       return;
     }
 
-    setClients([...clients, { id: Date.now(), ...newClient }]);
+    if (editClientId) {
+      // Update existing client
+      setClients(
+        clients.map((c) =>
+          c.id === editClientId ? { id: editClientId, ...newClient } : c
+        )
+      );
+    } else {
+      // Add new client
+      setClients([...clients, { id: Date.now(), ...newClient }]);
+    }
+
     setNewClient({ name: "", email: "", phone: "" });
+    setEditClientId(null);
     setShowModal(false);
+  };
+
+  const editClient = (client) => {
+    setNewClient({
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+    });
+    setEditClientId(client.id);
+    setShowModal(true);
   };
 
   const deleteClient = (id) => setClients(clients.filter((c) => c.id !== id));
 
-  // 🔍 Filter using GLOBAL SEARCH (Layout search bar)
   const filteredClients = clients.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -60,17 +80,19 @@ const ClientsPage = () => {
     >
       <h1 className="text-3xl font-extrabold mb-6 text-gray-800">Clients</h1>
 
-      {/* -------- TOP BAR -------- */}
       <div className="flex justify-end mb-6">
         <button
           className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow-md transition-all"
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setShowModal(true);
+            setEditClientId(null); // Reset edit
+            setNewClient({ name: "", email: "", phone: "" });
+          }}
         >
           + Add Client
         </button>
       </div>
 
-      {/* -------- TABLE -------- */}
       <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
         <table className="w-full">
           <thead>
@@ -92,7 +114,10 @@ const ClientsPage = () => {
                 <td className="p-3">{client.email}</td>
                 <td className="p-3">{client.phone}</td>
                 <td className="p-3 text-center">
-                  <button className="text-blue-600 font-semibold mr-4">
+                  <button
+                    className="text-blue-600 font-semibold mr-4"
+                    onClick={() => editClient(client)}
+                  >
                     Edit
                   </button>
                   <button
@@ -116,15 +141,23 @@ const ClientsPage = () => {
         </table>
       </div>
 
-      {/* -------- MODAL -------- */}
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
+        <div className="fixed inset-0 flex justify-center items-center z-50">
+          {/* Background blur */}
+          <div
+            className="absolute inset-0 backdrop-blur-sm bg-black/20"
+            onClick={() => setShowModal(false)}
+          ></div>
+
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white p-6 rounded-xl shadow-2xl w-96 border"
+            className="relative bg-white p-6 rounded-xl shadow-2xl w-96 border"
           >
-            <h2 className="text-xl font-bold mb-4">Add Client</h2>
+            <h2 className="text-xl font-bold mb-4">
+              {editClientId ? "Edit Client" : "Add Client"}
+            </h2>
 
             <input
               type="text"
@@ -163,12 +196,11 @@ const ClientsPage = () => {
               >
                 Cancel
               </button>
-
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                onClick={addClient}
+                onClick={addOrUpdateClient}
               >
-                Add
+                {editClientId ? "Update" : "Add"}
               </button>
             </div>
           </motion.div>

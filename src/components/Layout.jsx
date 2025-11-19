@@ -8,19 +8,22 @@ const Layout = () => {
   const location = useLocation();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true); // 👈 sidebar toggle
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex">
-      {/* Sidebar (Hide/Show with Animate) */}
-      {sidebarOpen && <Sidebar />}
+    <div className="flex w-full h-screen overflow-hidden">
+      {/* Sidebar */}
+      {sidebarOpen && (
+        <div className="h-full">
+          <Sidebar />
+        </div>
+      )}
 
-      {/* Right Content */}
-      <div className="flex-1 bg-gray-100 min-h-screen">
+      {/* Right Area */}
+      <div className="flex flex-col flex-1 h-full bg-gray-100 overflow-hidden">
         {/* Header */}
-        <header className="w-full flex justify-between items-center px-6 py-4 bg-white shadow">
+        <header className="w-full flex justify-between items-center px-6 py-4 bg-white shadow flex-shrink-0">
           <div className="flex items-center gap-4">
-            {/* 👇 Hamburger Icon */}
             <Menu
               size={26}
               className="cursor-pointer text-gray-700"
@@ -46,8 +49,8 @@ const Layout = () => {
           </div>
         </header>
 
-        {/* Page Content */}
-        <div className="p-6">
+        {/* Main Page Content (Scrollable Only Here) */}
+        <div className="flex-1 overflow-y-auto p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

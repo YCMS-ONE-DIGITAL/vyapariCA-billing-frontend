@@ -1,4 +1,3 @@
-// src/pages/InvoicePage.jsx
 import React, { useEffect, useState } from "react";
 import {
   Plus,
@@ -196,9 +195,9 @@ export default function InvoicePage() {
   // --- Save (add or update)
   function handleSaveInvoice(e) {
     e?.preventDefault?.();
-    // validation
+    // In a real app, use a custom modal instead of alert
     if (!form.invoiceNo || !form.invoiceDate || !form.customerName) {
-      alert("Invoice No, Date and Customer are required.");
+      console.error("Invoice No, Date and Customer are required.");
       return;
     }
 
@@ -508,29 +507,10 @@ export default function InvoicePage() {
             transition={{ duration: 0.18 }}
             className="bg-white w-full max-w-3xl rounded-xl shadow-xl overflow-auto max-h-[90vh] p-5"
           >
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">
-                {editingId ? "Edit Invoice" : "Add Invoice"}
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingId(null);
-                    setForm(emptyForm);
-                  }}
-                  className="px-3 py-1 rounded border"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveInvoice}
-                  className="px-3 py-1 bg-indigo-600 text-white rounded"
-                >
-                  {editingId ? "Update" : "Save"}
-                </button>
-              </div>
-            </div>
+            {/* INVOICE TITLE (Moved up and styled) */}
+            <h2 className="text-xl font-bold mb-4 border-b pb-2">
+              {editingId ? "Edit Invoice" : "Add New Invoice"}
+            </h2>
 
             <form
               onSubmit={(e) => {
@@ -721,9 +701,25 @@ export default function InvoicePage() {
                 </div>
               </div>
 
-              {/* hidden submit to allow Save button outside form controls */}
-              <div style={{ height: 0, overflow: "hidden" }} aria-hidden>
-                <button type="submit">Save</button>
+              {/* ACTION BUTTONS (Moved to the bottom) */}
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingId(null);
+                    setForm(emptyForm);
+                  }}
+                  className="px-4 py-2 rounded border hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow-md transition duration-150"
+                >
+                  {editingId ? "Update Invoice" : "Save Invoice"}
+                </button>
               </div>
             </form>
           </motion.div>

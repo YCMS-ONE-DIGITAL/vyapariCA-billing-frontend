@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import {
   createBrowserRouter,
@@ -12,34 +13,23 @@ import ClientsPage from "./pages/ClientsPage";
 import BillingPage from "./pages/BillingPage";
 import InvoicePage from "./pages/InvoicePage";
 import ReportsPage from "./pages/ReportsPage";
-import ForgotPassword from "./pages/ForgotPassword";
 import ProductPage from "./pages/ProductPage";
 import SettingsPage from "./pages/SettingsPage";
+import MyBusiness from "./pages/MyBusiness";
+import ForgotPassword from "./pages/ForgotPassword";
 import Logout from "./pages/Logout";
 
 // Layout
 import Layout from "./components/Layout";
 
 const router = createBrowserRouter([
-  // DEFAULT ENTRY → Redirect to Login Page
-  {
-    path: "/",
-    element: <Navigate to="/login" replace />,
-  },
+  { path: "/", element: <Navigate to="/login" replace /> },
 
-  // LOGIN PAGE
-  {
-    path: "/login",
-    element: <LoginPage />,
-  },
+  // ---------- Public Routes ----------
+  { path: "/login", element: <LoginPage /> },
+  { path: "/forgot-password", element: <ForgotPassword /> },
 
-  // FORGOT PASSWORD
-  {
-    path: "/forgot-password",
-    element: <ForgotPassword />,
-  },
-
-  // ALL LOGGED-IN PAGES
+  // ---------- Protected Routes with Layout ----------
   {
     path: "/app",
     element: <Layout />,
@@ -47,11 +37,12 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <DashboardPage /> },
       { path: "clients", element: <ClientsPage /> },
       { path: "billing", element: <BillingPage /> },
-      { path: "Invoices",element: <InvoicePage /> },
+      { path: "invoices", element: <InvoicePage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "products", element: <ProductPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "logout", element: <Logout /> },
+      { path: "my-business", element: <MyBusiness /> },
     ],
   },
 ]);

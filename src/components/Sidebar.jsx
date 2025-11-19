@@ -8,6 +8,7 @@ import {
   BarChart2,
   Settings,
   LogOut,
+  Building2,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -15,10 +16,9 @@ const Sidebar = () => {
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
 
   const confirmLogout = () => {
-    
     localStorage.removeItem("vyapari_user");
     setShowLogoutPopup(false);
-    navigate("/"); // login page ला redirect
+    navigate("/");
   };
 
   return (
@@ -53,7 +53,6 @@ const Sidebar = () => {
               icon={<FileText size={18} />}
               label="Invoices"
             />
-
             <SidebarItem
               to="/app/products"
               icon={<ShoppingBag size={18} />}
@@ -64,15 +63,24 @@ const Sidebar = () => {
               icon={<BarChart2 size={18} />}
               label="Reports"
             />
+
+            {/* ⭐ Settings */}
             <SidebarItem
               to="/app/settings"
               icon={<Settings size={18} />}
               label="Settings"
             />
+
+            {/* ⭐ NEW — My Business (under Settings) */}
+            <SidebarItem
+              to="/app/my-business"
+              icon={<Building2 size={18} />}
+              label="My Business"
+            />
           </div>
         </div>
 
-        {/* Logout Button (Bottom) */}
+        {/* Logout Button */}
         <div className="px-6 py-4">
           <button
             onClick={() => setShowLogoutPopup(true)}
@@ -83,7 +91,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Logout Confirmation Popup */}
+      {/* Logout Confirmation */}
       {showLogoutPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
@@ -99,7 +107,6 @@ const Sidebar = () => {
               >
                 Cancel
               </button>
-
               <button
                 onClick={confirmLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
