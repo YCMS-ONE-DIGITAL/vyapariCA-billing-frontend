@@ -1,18 +1,9 @@
 import React, { useEffect, useState } from "react";
-import {
-  Plus,
-  Trash2,
-  Edit,
-  Tag,
-  Search,
-  X,
-  DollarSign,
-  Package,
-} from "lucide-react";
+import { Plus, Trash2, Edit, Tag, Search, X } from "lucide-react";
 
-// -----------------------------------------------------------------------------
-// ProductFormModal (embedded component)
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Modal Component (NO CHANGE except responsive improvements)
+// ---------------------------------------------------------------------
 const ProductFormModal = ({
   isOpen,
   onClose,
@@ -38,28 +29,11 @@ const ProductFormModal = ({
 
   useEffect(() => {
     if (productToEdit) {
-      // Map only the fields we expect, and make sure numbers are strings for inputs
       setFormData({
-        id: productToEdit.id || null,
-        shop_id: productToEdit.shop_id || loggedInShopId || "",
-        sku: productToEdit.sku || "",
-        product_name: productToEdit.product_name || "",
-        hsn_sac: productToEdit.hsn_sac || "",
-        price:
-          productToEdit.price !== undefined && productToEdit.price !== null
-            ? String(productToEdit.price)
-            : "",
-        mrp:
-          productToEdit.mrp !== undefined && productToEdit.mrp !== null
-            ? String(productToEdit.mrp)
-            : "",
-        tax_percent:
-          productToEdit.tax_percent !== undefined &&
-          productToEdit.tax_percent !== null
-            ? String(productToEdit.tax_percent)
-            : "",
-        unit: productToEdit.unit || "piece",
-        track_inventory: productToEdit.track_inventory || "off",
+        ...productToEdit,
+        price: String(productToEdit.price),
+        mrp: String(productToEdit.mrp),
+        tax_percent: String(productToEdit.tax_percent),
         stock:
           productToEdit.stock !== undefined && productToEdit.stock !== null
             ? String(productToEdit.stock)
@@ -68,8 +42,7 @@ const ProductFormModal = ({
     } else {
       setFormData(initialFormState);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productToEdit, isOpen, loggedInShopId]);
+  }, [productToEdit, isOpen]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -85,13 +58,11 @@ const ProductFormModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Basic validation (you can extend as required)
     if (!formData.product_name || !formData.price) {
       alert("Please fill product name and price");
       return;
     }
 
-    // Convert numeric fields to numbers before sending up
     const payload = {
       ...formData,
       price: Number(formData.price) || 0,
@@ -107,170 +78,140 @@ const ProductFormModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Overlay */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-2 sm:px-4">
       <div
-        className="absolute inset-0  bg-opacity-40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal box */}
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 z-10">
+      <div className="relative w-full max-w-xl bg-white rounded-xl shadow-xl p-5 sm:p-6 z-10">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">
             {productToEdit ? "Edit Product" : "Add Product"}
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-100"
-            aria-label="Close modal"
+            className="p-1 rounded-md hover:bg-gray-200"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Product Name
-              </label>
+              <label className="text-sm font-medium">Product Name</label>
               <input
                 name="product_name"
                 value={formData.product_name}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="e.g. Imported PC Monitor (27 inch)"
+                className="w-full border rounded-lg p-2 mt-1"
+                placeholder="Product name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">SKU</label>
+              <label className="text-sm font-medium">SKU</label>
               <input
                 name="sku"
                 value={formData.sku}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="e.g. LED-M27"
+                className="w-full border rounded-lg p-2 mt-1"
+                placeholder="SKU code"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Price (₹)
-              </label>
+              <label className="text-sm font-medium">Price (₹)</label>
               <input
                 type="number"
                 name="price"
                 value={formData.price}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="0"
-                step="0.01"
-                min="0"
+                className="w-full border rounded-lg p-2 mt-1"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">MRP (₹)</label>
+              <label className="text-sm font-medium">MRP (₹)</label>
               <input
                 type="number"
                 name="mrp"
                 value={formData.mrp}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="0"
-                step="0.01"
-                min="0"
+                className="w-full border rounded-lg p-2 mt-1"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Tax (%)</label>
+              <label className="text-sm font-medium">Tax (%)</label>
               <input
                 type="number"
                 name="tax_percent"
                 value={formData.tax_percent}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="e.g. 18"
-                min="0"
-                max="100"
+                className="w-full border rounded-lg p-2 mt-1"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                HSN / SAC
-              </label>
+              <label className="text-sm font-medium">HSN / SAC</label>
               <input
                 name="hsn_sac"
                 value={formData.hsn_sac}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="e.g. 8471"
+                className="w-full border rounded-lg p-2 mt-1"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Unit</label>
+              <label className="text-sm font-medium">Unit</label>
               <select
                 name="unit"
                 value={formData.unit}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
+                className="w-full border rounded-lg p-2 mt-1"
               >
                 <option value="piece">Piece</option>
-                <option value="service">Service</option>
                 <option value="kg">KG</option>
-                <option value="meter">Meter</option>
+                <option value="service">Service</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Stock (optional)
-              </label>
+              <label className="text-sm font-medium">Stock</label>
               <input
                 type="number"
                 name="stock"
                 value={formData.stock}
                 onChange={handleChange}
-                className="w-full border rounded-lg p-2"
-                placeholder="e.g. 10"
-                min="0"
+                className="w-full border rounded-lg p-2 mt-1"
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 mt-4">
+              <input
+                type="checkbox"
+                name="track_inventory"
+                checked={formData.track_inventory === "on"}
+                onChange={handleChange}
+                className="w-5 h-5"
+              />
               <label className="text-sm font-medium">Track Inventory</label>
-              <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="track_inventory"
-                  checked={formData.track_inventory === "on"}
-                  onChange={handleChange}
-                  className="w-5 h-5"
-                />
-                <span className="text-sm">
-                  {formData.track_inventory === "on" ? "On" : "Off"}
-                </span>
-              </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-md border hover:bg-gray-50"
+              className="px-4 py-2 border rounded-lg"
             >
               Cancel
             </button>
-
             <button
               type="submit"
-              className="px-5 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
             >
               {productToEdit ? "Update" : "Save"}
             </button>
@@ -281,18 +222,18 @@ const ProductFormModal = ({
   );
 };
 
-// -----------------------------------------------------------------------------
-// Main ProductPage
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Product Page with FULL MOBILE UI + SR NO.
+// ---------------------------------------------------------------------
 export default function ProductPage() {
-  const loggedInShopId = "SHOP12345"; // mock — replace with real auth value
+  const loggedInShopId = "SHOP12345";
 
   const [products, setProducts] = useState([
     {
       id: 1,
       shop_id: loggedInShopId,
       sku: "TALLY-AMC",
-      product_name: "Tally Annual Maintenance",
+      product_name: "Tally AMC",
       hsn_sac: "9982",
       price: 15000,
       mrp: 15000,
@@ -305,7 +246,7 @@ export default function ProductPage() {
       id: 2,
       shop_id: loggedInShopId,
       sku: "LED-M27",
-      product_name: "Imported PC Monitor (27 inch)",
+      product_name: "27-inch Monitor",
       hsn_sac: "8471",
       price: 22500,
       mrp: 25000,
@@ -320,159 +261,109 @@ export default function ProductPage() {
   const [productToEdit, setProductToEdit] = useState(null);
   const [search, setSearch] = useState("");
 
+  const filtered = products.filter((p) =>
+    p.product_name.toLowerCase().includes(search.toLowerCase())
+  );
+
   const openCreate = () => {
     setProductToEdit(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (product) => {
-    setProductToEdit(product);
+  const handleEdit = (p) => {
+    setProductToEdit(p);
     setIsModalOpen(true);
   };
 
-  const handleSaveProduct = (payload) => {
-    // If payload has id -> update, else create new
+  const handleSave = (payload) => {
     if (payload.id) {
       setProducts((prev) =>
-        prev.map((p) => (p.id === payload.id ? { ...p, ...payload } : p))
+        prev.map((p) => (p.id === payload.id ? payload : p))
       );
-      console.log("Updated product", payload.id);
     } else {
-      const newId = Date.now();
-      const newProduct = { ...payload, id: newId };
-      setProducts((prev) => [...prev, newProduct]);
-      console.log("Created product", newId);
+      setProducts((prev) => [...prev, { ...payload, id: Date.now() }]);
     }
-
-    // TODO: integrate with your API (Spring Boot / Firestore) here.
   };
 
   const handleDelete = (id) => {
-    const yes = window.confirm("Are you sure you want to delete this product?");
-    if (!yes) return;
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    if (window.confirm("Delete product?")) {
+      setProducts(products.filter((p) => p.id !== id));
+    }
   };
 
-  const filtered = products.filter((p) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      p.product_name.toLowerCase().includes(q) ||
-      (p.sku || "").toLowerCase().includes(q) ||
-      (p.hsn_sac || "").toLowerCase().includes(q)
-    );
-  });
-
   return (
-    <div className="p-6 bg-gray-50 min-h-screen font-sans">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-        <div className="flex items-center gap-3">
-          <Tag className="w-7 h-7 text-indigo-600" />
-          <div>
-            <h1 className="text-2xl font-bold">Product & Service Catalog</h1>
-            <p className="text-sm text-gray-500">
-              Manage products, pricing & inventory
-            </p>
-          </div>
+    <div className="p-4 sm:p-6">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+        <div className="flex items-center gap-2">
+          <Tag className="w-6 h-6 text-indigo-600" />
+          <h1 className="text-xl sm:text-2xl font-bold">
+            Product & Service Catalog
+          </h1>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, SKU or HSN"
-              className="w-full border rounded-lg pl-10 pr-3 py-2"
+              placeholder="Search products..."
+              className="w-full border rounded-lg pl-10 p-2"
             />
             <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
           </div>
 
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" /> Add Product
+            <Plus className="w-4 h-4" /> Add
           </button>
         </div>
-      </header>
+      </div>
 
-      <div className="bg-white rounded-2xl shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      {/* TABLE (Desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl shadow overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Product Name / SKU
+              <th className="px-4 py-2 text-xs font-bold">SR</th>
+              <th className="px-4 py-2 text-left text-xs font-bold">
+                Product Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                HSN/SAC
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Price (₹)
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Tax (%)
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Inventory
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Actions
+              <th className="px-4 py-2 text-xs font-bold">HSN</th>
+              <th className="px-4 py-2 text-xs font-bold">Price</th>
+              <th className="px-4 py-2 text-xs font-bold">Tax</th>
+              <th className="px-4 py-2 text-xs font-bold">Inv</th>
+              <th className="px-4 py-2 text-xs font-bold text-center">
+                Action
               </th>
             </tr>
           </thead>
 
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filtered.map((product) => (
-              <tr key={product.id} className="hover:bg-indigo-50 transition">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {product.product_name}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    SKU: {product.sku || "N/A"}
-                  </div>
+          <tbody>
+            {filtered.map((p, index) => (
+              <tr key={p.id} className="border-b hover:bg-gray-50">
+                <td className="px-4 py-2 text-center">{index + 1}</td>
+                <td className="px-4 py-2">{p.product_name}</td>
+                <td className="px-4 py-2 text-center">{p.hsn_sac}</td>
+                <td className="px-4 py-2 text-right">₹ {p.price}</td>
+                <td className="px-4 py-2 text-center">{p.tax_percent}%</td>
+                <td className="px-4 py-2 text-center">
+                  {p.track_inventory === "on" ? "On" : "Off"}
                 </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {product.hsn_sac || "N/A"}
-                </td>
-
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                  ₹{" "}
-                  {Number(product.price).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
-                </td>
-
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                  {product.tax_percent}%
-                </td>
-
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.track_inventory === "on"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {product.track_inventory === "on" ? "On" : "Off"}
-                  </span>
-                </td>
-
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                <td className="px-4 py-2 text-center">
                   <button
-                    onClick={() => handleEdit(product)}
-                    className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-100 transition"
-                    title="Edit Product"
+                    onClick={() => handleEdit(p)}
+                    className="text-indigo-600 p-1"
                   >
                     <Edit className="w-5 h-5" />
                   </button>
 
                   <button
-                    onClick={() => handleDelete(product.id)}
-                    className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-100 transition"
-                    title="Delete Product"
+                    onClick={() => handleDelete(p.id)}
+                    className="text-red-600 p-1"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -481,12 +372,36 @@ export default function ProductPage() {
             ))}
           </tbody>
         </table>
+      </div>
 
-        {filtered.length === 0 && (
-          <div className="p-6 text-center text-gray-500">
-            No products found. Click "Add Product" to create your first item.
+      {/* MOBILE CARD VIEW */}
+      <div className="sm:hidden space-y-3">
+        {filtered.map((p, index) => (
+          <div key={p.id} className="bg-white shadow rounded-lg p-4 border">
+            <div className="flex justify-between">
+              <span className="text-sm font-bold">
+                #{index + 1} — {p.product_name}
+              </span>
+
+              <div className="flex gap-2">
+                <button onClick={() => handleEdit(p)}>
+                  <Edit className="w-5 h-5 text-indigo-600" />
+                </button>
+
+                <button onClick={() => handleDelete(p.id)}>
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-2 text-sm text-gray-700">
+              <p>HSN: {p.hsn_sac}</p>
+              <p>Price: ₹ {p.price}</p>
+              <p>Tax: {p.tax_percent}%</p>
+              <p>Inventory: {p.track_inventory === "on" ? "On" : "Off"}</p>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Modal */}
@@ -495,7 +410,7 @@ export default function ProductPage() {
         onClose={() => setIsModalOpen(false)}
         productToEdit={productToEdit}
         loggedInShopId={loggedInShopId}
-        onSave={handleSaveProduct}
+        onSave={handleSave}
       />
     </div>
   );

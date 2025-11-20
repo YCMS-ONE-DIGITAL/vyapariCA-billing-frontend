@@ -1,6 +1,7 @@
-// BillingPage.jsx (With GLOBAL SEARCH)
+// BillingPage.jsx (With GLOBAL SEARCH + MOBILE RESPONSIVE UI)
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
+import { Printer, Trash2 } from "lucide-react";
 
 const SAMPLE_INVOICES = [
   {
@@ -35,7 +36,6 @@ function formatCurrency(n) {
 }
 
 export default function BillingPage() {
-  // 🔍 Get Global Search Query from Layout.jsx
   const { searchQuery } = useOutletContext();
 
   const [invoices, setInvoices] = useState(() => {
@@ -67,16 +67,11 @@ export default function BillingPage() {
       0
     );
 
-  // 🔍 FILTER USING GLOBAL SEARCH
   const filtered = invoices.filter(
     (inv) =>
       inv.invoiceNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inv.customer.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // ------------------------------------------------------
-  // PRINT FUNCTION (unchanged)
-  // ------------------------------------------------------
 
   const handlePrint = (invoiceId) => {
     const inv = invoices.find((i) => i.id === invoiceId);
@@ -88,9 +83,7 @@ export default function BillingPage() {
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${
             idx + 1
           }</td>
-          <td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-            it.desc
-          )}</td>
+          <td style="padding:8px;border:1px solid #ddd">${it.desc}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${
             it.qty
           }</td>
@@ -110,40 +103,37 @@ export default function BillingPage() {
     const html = `
       <!doctype html>
       <html>
-      <head>
-      <meta charset="utf-8" />
-      <title>Invoice ${escapeHtml(inv.invoiceNo)}</title>
-      ...
-      </head>
+      <head><meta charset="utf-8" /></head>
       <body>
-      ...
+      <h2>Invoice ${inv.invoiceNo}</h2>
+      <p>Customer: ${inv.customer}</p>
+      <p>Date: ${inv.date}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:20px">
+      <thead><tr>
+        <th style="padding:8px;border:1px solid #ddd">#</th>
+        <th style="padding:8px;border:1px solid #ddd">Description</th>
+        <th style="padding:8px;border:1px solid #ddd">Qty</th>
+        <th style="padding:8px;border:1px solid #ddd">Rate</th>
+        <th style="padding:8px;border:1px solid #ddd">Total</th>
+      </tr></thead>
+      <tbody>${itemsHtml}</tbody>
+      </table>
+      <h3>Grand Total: ${formatCurrency(total)}</h3>
       </body>
-      </html>`;
+      </html>
+    `;
 
     const win = window.open("", "_blank", "width=900,height=700");
     win.document.write(html);
     win.document.close();
   };
 
-  function escapeHtml(str) {
-    if (!str && str !== 0) return "";
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
   return (
-    <div className="p-6 text-gray-900">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Billing</h1>
-      </div>
+    <div className="p-4 sm:p-6 text-gray-900">
+      <h1 className="text-xl sm:text-2xl font-semibold mb-4">Billing</h1>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl shadow bg-white">
+      {/* DESKTOP TABLE */}
+      <div className="hidden md:block overflow-x-auto rounded-xl shadow bg-white">
         <table className="min-w-full">
           <thead className="bg-gray-200 text-gray-900">
             <tr>
@@ -160,7 +150,10 @@ export default function BillingPage() {
           <tbody>
             {filtered.length ? (
               filtered.map((inv, idx) => (
-                <tr key={inv.id} className="border-b text-gray-900">
+                <tr
+                  key={inv.id}
+                  className="border-b text-gray-900 hover:bg-gray-100"
+                >
                   <td className="p-3">{idx + 1}</td>
                   <td className="p-3">{inv.invoiceNo}</td>
                   <td className="p-3">{inv.date}</td>
@@ -171,33 +164,34 @@ export default function BillingPage() {
                   <td className="p-3">
                     <span
                       className={`text-white px-3 py-1 rounded-full text-sm ${
-                        STATUS_COLORS[inv.status] || "bg-gray-500"
+                        STATUS_COLORS[inv.status]
                       }`}
                     >
                       {inv.status}
                     </span>
                   </td>
-                  <td className="p-3 space-x-2">
+
+                  <td className="p-3 flex gap-4">
                     <button
                       onClick={() => handlePrint(inv.id)}
-                      className="px-2 py-1 bg-green-600 text-white rounded"
+                      className="text-green-600 hover:text-green-800"
                     >
-                      Print
+                      <Printer size={20} />
                     </button>
 
                     <button
                       onClick={() => confirmDelete(inv.id)}
-                      className="px-2 py-1 bg-red-600 text-white rounded"
+                      className="text-red-600 hover:text-red-800"
                     >
-                      Delete
+                      <Trash2 size={20} />
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-gray-700">
-                  No invoices found.
+                <td colSpan={7} className="p-4 text-center">
+                  No invoices found
                 </td>
               </tr>
             )}
@@ -205,14 +199,59 @@ export default function BillingPage() {
         </table>
       </div>
 
-      {/* Delete Confirm */}
+      {/* MOBILE CARDS */}
+      <div className="md:hidden space-y-4">
+        {filtered.map((inv, idx) => (
+          <div key={inv.id} className="bg-white shadow rounded-xl p-4 border">
+            {/* TOP ROW */}
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-500 text-sm">#{idx + 1}</span>
+
+              <div className="flex gap-3">
+                <Printer
+                  size={20}
+                  className="text-green-600 active:scale-90"
+                  onClick={() => handlePrint(inv.id)}
+                />
+
+                <Trash2
+                  size={20}
+                  className="text-red-600 active:scale-90"
+                  onClick={() => confirmDelete(inv.id)}
+                />
+              </div>
+            </div>
+
+            {/* MAIN INFO */}
+            <p className="font-bold text-lg">{inv.invoiceNo}</p>
+            <p className="text-gray-700 text-sm">Customer: {inv.customer}</p>
+            <p className="text-gray-700 text-sm">Date: {inv.date}</p>
+
+            {/* STATUS & AMOUNT */}
+            <div className="flex justify-between items-center mt-3">
+              <span
+                className={`text-white px-3 py-1 rounded-full text-xs ${
+                  STATUS_COLORS[inv.status]
+                }`}
+              >
+                {inv.status}
+              </span>
+
+              <span className="font-semibold text-base">
+                {formatCurrency(calcItemsTotal(inv.items))}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* DELETE CONFIRM MODAL */}
       {deleteId != null && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 text-gray-900">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6">
             <h3 className="text-lg font-medium mb-2">Delete Invoice</h3>
-            <p className="mb-4">
-              Are you sure you want to delete this invoice?
-            </p>
+            <p className="mb-4">Are you sure?</p>
+
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeleteId(null)}

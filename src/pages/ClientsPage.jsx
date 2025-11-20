@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useOutletContext } from "react-router-dom";
+import { Pencil, Trash2 } from "lucide-react";
 
 const ClientsPage = () => {
   const { searchQuery } = useOutletContext();
@@ -26,7 +27,7 @@ const ClientsPage = () => {
     email: "",
     phone: "",
   });
-  const [editClientId, setEditClientId] = useState(null); // For edit
+  const [editClientId, setEditClientId] = useState(null);
 
   useEffect(() => {
     document.body.style.overflow = showModal ? "hidden" : "auto";
@@ -39,14 +40,12 @@ const ClientsPage = () => {
     }
 
     if (editClientId) {
-      // Update existing client
       setClients(
         clients.map((c) =>
           c.id === editClientId ? { id: editClientId, ...newClient } : c
         )
       );
     } else {
-      // Add new client
       setClients([...clients, { id: Date.now(), ...newClient }]);
     }
 
@@ -76,16 +75,18 @@ const ClientsPage = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="p-6"
+      className="p-4 sm:p-6"
     >
-      <h1 className="text-3xl font-extrabold mb-6 text-gray-800">Clients</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 text-gray-800">
+        Clients
+      </h1>
 
-      <div className="flex justify-end mb-6">
+      <div className="flex justify-end mb-4 sm:mb-6">
         <button
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow-md transition-all"
+          className="bg-blue-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg hover:bg-blue-700 shadow-md transition-all text-sm sm:text-base"
           onClick={() => {
             setShowModal(true);
-            setEditClientId(null); // Reset edit
+            setEditClientId(null);
             setNewClient({ name: "", email: "", phone: "" });
           }}
         >
@@ -93,10 +94,12 @@ const ClientsPage = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
         <table className="w-full">
           <thead>
             <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <th className="p-3 text-left">Sr.No</th>
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
               <th className="p-3 text-left">Phone</th>
@@ -105,26 +108,29 @@ const ClientsPage = () => {
           </thead>
 
           <tbody>
-            {filteredClients.map((client) => (
+            {filteredClients.map((client, index) => (
               <tr
                 key={client.id}
                 className="border-t hover:bg-gray-100 transition"
               >
+                <td className="p-3">{index + 1}</td>
                 <td className="p-3">{client.name}</td>
                 <td className="p-3">{client.email}</td>
                 <td className="p-3">{client.phone}</td>
-                <td className="p-3 text-center">
-                  <button
-                    className="text-blue-600 font-semibold mr-4"
-                    onClick={() => editClient(client)}
-                  >
-                    Edit
+
+                <td className="p-3 text-center flex justify-center gap-4">
+                  <button onClick={() => editClient(client)}>
+                    <Pencil
+                      size={20}
+                      className="text-blue-600 hover:text-blue-800"
+                    />
                   </button>
-                  <button
-                    className="text-red-600 font-semibold"
-                    onClick={() => deleteClient(client.id)}
-                  >
-                    Delete
+
+                  <button onClick={() => deleteClient(client.id)}>
+                    <Trash2
+                      size={20}
+                      className="text-red-600 hover:text-red-800"
+                    />
                   </button>
                 </td>
               </tr>
@@ -132,7 +138,7 @@ const ClientsPage = () => {
 
             {filteredClients.length === 0 && (
               <tr>
-                <td colSpan="4" className="text-center p-6 text-gray-500">
+                <td colSpan="5" className="text-center p-6 text-gray-500">
                   No clients found
                 </td>
               </tr>
@@ -141,10 +147,40 @@ const ClientsPage = () => {
         </table>
       </div>
 
+      {/* Mobile Card Layout */}
+      <div className="md:hidden space-y-4">
+        {filteredClients.map((client, index) => (
+          <div
+            key={client.id}
+            className="bg-white rounded-xl shadow p-4 border border-gray-200"
+          >
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-500 text-sm">#{index + 1}</span>
+
+              <div className="flex gap-3">
+                <Pencil
+                  size={20}
+                  onClick={() => editClient(client)}
+                  className="text-blue-600 active:scale-90"
+                />
+                <Trash2
+                  size={20}
+                  onClick={() => deleteClient(client.id)}
+                  className="text-red-600 active:scale-90"
+                />
+              </div>
+            </div>
+
+            <p className="font-bold text-lg">{client.name}</p>
+            <p className="text-gray-600 text-sm">{client.email}</p>
+            <p className="text-gray-600 text-sm">{client.phone}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex justify-center items-center z-50">
-          {/* Background blur */}
+        <div className="fixed inset-0 flex justify-center items-center z-50 px-4">
           <div
             className="absolute inset-0 backdrop-blur-sm bg-black/20"
             onClick={() => setShowModal(false)}
@@ -153,7 +189,7 @@ const ClientsPage = () => {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="relative bg-white p-6 rounded-xl shadow-2xl w-96 border"
+            className="relative bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border"
           >
             <h2 className="text-xl font-bold mb-4">
               {editClientId ? "Edit Client" : "Add Client"}

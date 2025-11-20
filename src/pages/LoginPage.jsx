@@ -22,6 +22,7 @@ const LoginPage = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white rounded-2xl w-[360px] shadow-lg">
+        
         {/* 🔵 Header */}
         <div className="bg-blue-600 text-white rounded-t-2xl p-6 text-center">
           <h2 className="text-2xl font-bold">Vyapari CA Login</h2>
@@ -65,7 +66,7 @@ const LoginPage = () => {
                 onChange={() => setShowPassword(!showPassword)}
               />
               <label className="text-gray-700 text-sm">
-                Remember Me (Show Password)
+                Remember Me 
               </label>
             </div>
 
