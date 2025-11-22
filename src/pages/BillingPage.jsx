@@ -1,4 +1,4 @@
-// BillingPage.jsx (With GLOBAL SEARCH + MOBILE RESPONSIVE UI)
+// BillingPage.jsx (Table Only - Responsive on All Devices)
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Printer, Trash2 } from "lucide-react";
@@ -132,36 +132,36 @@ export default function BillingPage() {
     <div className="p-4 sm:p-6 text-gray-900">
       <h1 className="text-xl sm:text-2xl font-semibold mb-4">Billing</h1>
 
-      {/* DESKTOP TABLE */}
-      <div className="hidden md:block overflow-x-auto rounded-xl shadow bg-white">
-        <table className="min-w-full">
-          <thead className="bg-gray-200 text-gray-900">
+      {/* ALWAYS TABLE — FOR ALL DEVICE SIZES */}
+      <div className="overflow-x-auto rounded-xl shadow bg-white">
+        <table className="min-w-full text-gray-900">
+          <thead className="bg-gray-200">
             <tr>
               <th className="p-3 text-left">Sr.No</th>
               <th className="p-3 text-left">Invoice No</th>
               <th className="p-3 text-left">Invoice Date</th>
               <th className="p-3 text-left">Customer</th>
-              <th className="p-3 text-right">Amount</th>
-              <th className="p-3 text-left">Payment Status</th>
-              <th className="p-3 text-left">Action</th>
+
+              <th className="p-3 text-center">Amount</th>
+              <th className="p-3 text-center">Status</th>
+              <th className="p-3 text-center">Action</th>
             </tr>
           </thead>
 
           <tbody>
             {filtered.length ? (
               filtered.map((inv, idx) => (
-                <tr
-                  key={inv.id}
-                  className="border-b text-gray-900 hover:bg-gray-100"
-                >
+                <tr key={inv.id} className="border-b hover:bg-gray-100">
                   <td className="p-3">{idx + 1}</td>
                   <td className="p-3">{inv.invoiceNo}</td>
                   <td className="p-3">{inv.date}</td>
                   <td className="p-3">{inv.customer}</td>
-                  <td className="p-3 text-right">
+
+                  <td className="p-3 text-center font-semibold">
                     {formatCurrency(calcItemsTotal(inv.items))}
                   </td>
-                  <td className="p-3">
+
+                  <td className="p-3 text-center">
                     <span
                       className={`text-white px-3 py-1 rounded-full text-sm ${
                         STATUS_COLORS[inv.status]
@@ -171,7 +171,7 @@ export default function BillingPage() {
                     </span>
                   </td>
 
-                  <td className="p-3 flex gap-4">
+                  <td className="p-3 text-center flex justify-center gap-4">
                     <button
                       onClick={() => handlePrint(inv.id)}
                       className="text-green-600 hover:text-green-800"
@@ -199,53 +199,7 @@ export default function BillingPage() {
         </table>
       </div>
 
-      {/* MOBILE CARDS */}
-      <div className="md:hidden space-y-4">
-        {filtered.map((inv, idx) => (
-          <div key={inv.id} className="bg-white shadow rounded-xl p-4 border">
-            {/* TOP ROW */}
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-500 text-sm">#{idx + 1}</span>
-
-              <div className="flex gap-3">
-                <Printer
-                  size={20}
-                  className="text-green-600 active:scale-90"
-                  onClick={() => handlePrint(inv.id)}
-                />
-
-                <Trash2
-                  size={20}
-                  className="text-red-600 active:scale-90"
-                  onClick={() => confirmDelete(inv.id)}
-                />
-              </div>
-            </div>
-
-            {/* MAIN INFO */}
-            <p className="font-bold text-lg">{inv.invoiceNo}</p>
-            <p className="text-gray-700 text-sm">Customer: {inv.customer}</p>
-            <p className="text-gray-700 text-sm">Date: {inv.date}</p>
-
-            {/* STATUS & AMOUNT */}
-            <div className="flex justify-between items-center mt-3">
-              <span
-                className={`text-white px-3 py-1 rounded-full text-xs ${
-                  STATUS_COLORS[inv.status]
-                }`}
-              >
-                {inv.status}
-              </span>
-
-              <span className="font-semibold text-base">
-                {formatCurrency(calcItemsTotal(inv.items))}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* DELETE CONFIRM MODAL */}
+      {/* DELETE MODAL */}
       {deleteId != null && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6">
@@ -259,6 +213,7 @@ export default function BillingPage() {
               >
                 Cancel
               </button>
+
               <button
                 onClick={doDelete}
                 className="px-3 py-2 bg-red-600 text-white rounded"

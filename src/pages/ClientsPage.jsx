@@ -94,9 +94,9 @@ const ClientsPage = () => {
         </button>
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
-        <table className="w-full">
+      {/* ALWAYS VISIBLE TABLE (ALL DEVICES) */}
+      <div className="overflow-x-auto bg-white rounded-xl shadow-xl border border-gray-200">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <th className="p-3 text-left">Sr.No</th>
@@ -145,37 +145,6 @@ const ClientsPage = () => {
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* Mobile Card Layout */}
-      <div className="md:hidden space-y-4">
-        {filteredClients.map((client, index) => (
-          <div
-            key={client.id}
-            className="bg-white rounded-xl shadow p-4 border border-gray-200"
-          >
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-500 text-sm">#{index + 1}</span>
-
-              <div className="flex gap-3">
-                <Pencil
-                  size={20}
-                  onClick={() => editClient(client)}
-                  className="text-blue-600 active:scale-90"
-                />
-                <Trash2
-                  size={20}
-                  onClick={() => deleteClient(client.id)}
-                  className="text-red-600 active:scale-90"
-                />
-              </div>
-            </div>
-
-            <p className="font-bold text-lg">{client.name}</p>
-            <p className="text-gray-600 text-sm">{client.email}</p>
-            <p className="text-gray-600 text-sm">{client.phone}</p>
-          </div>
-        ))}
       </div>
 
       {/* Modal */}

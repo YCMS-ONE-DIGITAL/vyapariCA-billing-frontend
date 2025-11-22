@@ -64,6 +64,13 @@ const Sidebar = () => {
               label="Reports"
             />
 
+            {/* ⭐ NEW — My Business (under Settings) */}
+            <SidebarItem
+              to="/app/my-business"
+              icon={<Building2 size={18} />}
+              label="My Business"
+            />
+
             {/* ⭐ Settings */}
             <SidebarItem
               to="/app/settings"
@@ -71,12 +78,7 @@ const Sidebar = () => {
               label="Settings"
             />
 
-            {/* ⭐ NEW — My Business (under Settings) */}
-            <SidebarItem
-              to="/app/my-business"
-              icon={<Building2 size={18} />}
-              label="My Business"
-            />
+            
           </div>
         </div>
 
