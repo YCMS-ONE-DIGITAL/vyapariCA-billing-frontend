@@ -1,3 +1,5 @@
+// InvoicePage.jsx
+// Requires: npm install html2canvas jspdf lucide-react framer-motion
 import React, { useEffect, useState } from "react";
 import {
   Plus,
@@ -6,8 +8,13 @@ import {
   Printer,
   ChevronLeft,
   ChevronRight,
+  Smartphone,
+  Download,
+  FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 // LocalStorage keys
 const LS_INVOICES = "vyapari_invoices_v1";
@@ -93,7 +100,7 @@ export default function InvoicePage() {
   // filtering
   const filtered = invoices.filter(
     (inv) =>
-      inv.invoiceNo?.toLowerCase().includes(search.toLowerCase()) ||
+      (inv.invoiceNo || "").toLowerCase().includes(search.toLowerCase()) ||
       (inv.customerName || "").toLowerCase().includes(search.toLowerCase())
   );
 
@@ -216,65 +223,399 @@ export default function InvoicePage() {
   // escape HTML
   function escapeHtml(str) {
     if (!str) return "";
-    return str
+    return String(str)
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;");
   }
 
-  // Print Invoice
-  function openPrintWindow(inv) {
+  // --------------------
+  // PRINT / SHARE HELPERS
+  // --------------------
+
+  // create an invoice HTML fragment (string) used for print / capture
+  function buildInvoiceHtmlString(inv, options = { pos: false }) {
+    const subtotal = calcSubtotal(inv.items || []);
+    const gst = calcGST(subtotal, inv.gstPercent);
+    const total = calcTotal(subtotal, inv.gstPercent);
+
+    // POS narrow receipt
+    if (options.pos) {
+      const itemsRows = inv.items
+        .map(
+          (it) => `<tr>
+            <td style="padding:4px 0; font-size:13px;">${escapeHtml(
+              it.desc
+            )}</td>
+            <td style="text-align:center; font-size:13px;">${it.qty}</td>
+            <td style="text-align:right; font-size:13px;">${Number(
+              it.rate
+            ).toFixed(2)}</td>
+            <td style="text-align:right; font-size:13px;">${Number(
+              it.qty * it.rate
+            ).toFixed(2)}</td>
+          </tr>`
+        )
+        .join("");
+
+      return `
+        <div style="font-family:monospace; width:260px; padding:10px; margin:0 auto; text-align:center;">
+          <div style="text-align:center;">
+            <h3 style="margin:0;">Vyapari CA</h3>
+            <div>Invoice Receipt</div>
+          </div>
+          <div style="margin-top:8px; text-align:left;">
+            <div><strong>Invoice:</strong> ${inv.invoiceNo}</div>
+            <div><strong>Date:</strong> ${inv.invoiceDate}</div>
+            <div><strong>Customer:</strong> ${escapeHtml(
+              inv.customerName
+            )}</div>
+          </div>
+          <hr style="border:none;border-top:1px dashed #000;margin:8px 0" />
+          <table style="width:100%;border-collapse:collapse; text-align:left;">
+            <thead>
+              <tr>
+                <th style="text-align:left;font-size:13px;">Item</th>
+                <th style="text-align:center;font-size:13px;">Qty</th>
+                <th style="text-align:right;font-size:13px;">Rate</th>
+                <th style="text-align:right;font-size:13px;">Amt</th>
+              </tr>
+            </thead>
+            <tbody>${itemsRows}</tbody>
+          </table>
+          <hr style="border:none;border-top:1px dashed #000;margin:8px 0" />
+          <div style="text-align:left;">
+            <div><strong>Subtotal:</strong> ${formatCurrency(subtotal)}</div>
+            <div><strong>GST (${inv.gstPercent}%):</strong> ${formatCurrency(
+        gst
+      )}</div>
+            <div style="font-weight:bold;"><strong>Total:</strong> ${formatCurrency(
+              total
+            )}</div>
+          </div>
+          <hr style="border:none;border-top:1px dashed #000;margin:8px 0" />
+          <div style="text-align:center;">Thank you! Visit Again</div>
+        </div>
+      `;
+    }
+
+    // default A4 invoice — centered on page when printed or captured
+    const rows = inv.items
+      .map(
+        (it, i) => `<tr>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${
+            i + 1
+          }</td>
+          <td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+            it.desc
+          )}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${
+            it.qty
+          }</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${formatCurrency(
+            it.rate
+          )}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${formatCurrency(
+            it.qty * it.rate
+          )}</td>
+        </tr>`
+      )
+      .join("");
+
+    return `
+      <div style="font-family:Arial,Helvetica,sans-serif; padding:20px; display:flex; align-items:center; justify-content:center; min-height:100vh;">
+        <div style="max-width:800px; width:100%; box-shadow:0 0 0 rgba(0,0,0,0);">
+          <div style="text-align:center;">
+            <h2 style="margin:0">Vyapari CA</h2>
+            <p style="margin:4px 0 12px 0;">Invoice</p>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+            <div><strong>Invoice:</strong> ${inv.invoiceNo}</div>
+            <div><strong>Date:</strong> ${inv.invoiceDate}</div>
+            <div><strong>Customer:</strong> ${escapeHtml(
+              inv.customerName
+            )}</div>
+          </div>
+
+          <table style="width:100%;border-collapse:collapse;margin-top:10px">
+            <thead>
+              <tr>
+                <th style="padding:8px;border:1px solid #ddd">#</th>
+                <th style="padding:8px;border:1px solid #ddd">Description</th>
+                <th style="padding:8px;border:1px solid #ddd">Qty</th>
+                <th style="padding:8px;border:1px solid #ddd;text-align:right">Rate</th>
+                <th style="padding:8px;border:1px solid #ddd;text-align:right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              <tr><td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right">Subtotal</td><td style="padding:8px;border:1px solid #ddd;text-align:right">${formatCurrency(
+                calcSubtotal(inv.items)
+              )}</td></tr>
+              <tr><td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right">GST (${
+                inv.gstPercent
+              }%)</td><td style="padding:8px;border:1px solid #ddd;text-align:right">${formatCurrency(
+      calcGST(calcSubtotal(inv.items), inv.gstPercent)
+    )}</td></tr>
+              <tr><td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right"><strong>Total</strong></td><td style="padding:8px;border:1px solid #ddd;text-align:right"><strong>${formatCurrency(
+                calcTotal(calcSubtotal(inv.items), inv.gstPercent)
+              )}</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // helper to create a temporary DOM node containing invoice HTML, returns the node reference
+  function createTempInvoiceNode(htmlString) {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "fixed";
+    wrapper.style.left = "-9999px";
+    wrapper.style.top = "0";
+    wrapper.style.zIndex = "999999";
+    wrapper.innerHTML = htmlString;
+    document.body.appendChild(wrapper);
+    return wrapper;
+  }
+
+  // Share as plain WhatsApp text using wa.me
+  function shareAsText(inv) {
+    const subtotal = calcSubtotal(inv.items || []);
+    const gst = calcGST(subtotal, inv.gstPercent);
+    const total = calcTotal(subtotal, inv.gstPercent);
+
+    const text = [
+      `*Vyapari CA - Invoice*`,
+      `Invoice: ${inv.invoiceNo}`,
+      `Date: ${inv.invoiceDate}`,
+      `Customer: ${inv.customerName}`,
+      ``,
+      `Items:`,
+      ...inv.items.map(
+        (it, idx) =>
+          `${idx + 1}) ${it.desc} — ${it.qty} x ${formatCurrency(
+            it.rate
+          )} = ${formatCurrency(it.qty * it.rate)}`
+      ),
+      ``,
+      `Subtotal: ${formatCurrency(subtotal)}`,
+      `GST (${inv.gstPercent}%): ${formatCurrency(gst)}`,
+      `Total: ${formatCurrency(total)}`,
+      ``,
+      `Thank you for your business!`,
+    ].join("\n");
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  }
+
+  // Share as image: render temporary node → html2canvas → share or download
+  async function shareAsImage(inv) {
+    try {
+      const html = buildInvoiceHtmlString(inv, { pos: false }); // use normal invoice look for image
+      const node = createTempInvoiceNode(html);
+
+      // use html2canvas
+      const canvas = await html2canvas(node, { scale: 2 });
+      node.remove();
+
+      const dataUrl = canvas.toDataURL("image/png");
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `${inv.invoiceNo}.png`, {
+        type: "image/png",
+      });
+
+      // Try Web Share API (files)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${inv.invoiceNo}`,
+          text: `Invoice ${inv.invoiceNo}`,
+        });
+        return;
+      }
+
+      // fallback: download the image
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `${inv.invoiceNo}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      alert("Image downloaded. Share it on WhatsApp or other apps manually.");
+    } catch (err) {
+      console.error("shareAsImage error:", err);
+      alert("Unable to share image on this device. Try PDF or Text share.");
+    }
+  }
+
+  // Share as PDF: render node -> html2canvas -> jsPDF -> share or download
+  async function shareAsPDF(inv) {
+    try {
+      const html = buildInvoiceHtmlString(inv, { pos: false });
+      const node = createTempInvoiceNode(html);
+
+      const canvas = await html2canvas(node, { scale: 2 });
+      node.remove();
+
+      const imgData = canvas.toDataURL("image/png");
+      // create jsPDF (portrait A4)
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pageWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      let y = 0;
+      pdf.addImage(imgData, "PNG", 0, y, imgWidth, imgHeight);
+      // Note: If imageHeight > pageHeight, further splitting can be implemented.
+
+      const pdfBlob = pdf.output("blob");
+      const file = new File([pdfBlob], `${inv.invoiceNo}.pdf`, {
+        type: "application/pdf",
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${inv.invoiceNo}`,
+          text: `Invoice ${inv.invoiceNo}`,
+        });
+        return;
+      }
+
+      // fallback – trigger download
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${inv.invoiceNo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      alert("PDF downloaded. You can share it on WhatsApp from your device.");
+    } catch (err) {
+      console.error("shareAsPDF error:", err);
+      alert("Unable to create/share PDF on this device.");
+    }
+  }
+
+  // Print Invoice (POS Auto-Print + Auto-Close small window)
+  function openPOSPrint(inv) {
     const subtotal = calcSubtotal(inv.items || []);
     const gst = calcGST(subtotal, inv.gstPercent);
     const total = calcTotal(subtotal, inv.gstPercent);
 
     const itemsHtml = inv.items
       .map(
-        (it, i) => `
+        (it) => `
       <tr>
-        <td>${i + 1}</td>
-        <td>${escapeHtml(it.desc)}</td>
-        <td>${it.qty}</td>
-        <td>${formatCurrency(it.rate)}</td>
-        <td>${formatCurrency(it.qty * it.rate)}</td>
-      </tr>
-    `
+        <td style="padding:4px 0; text-align:left;">${escapeHtml(it.desc)}</td>
+        <td style="text-align:center;">${it.qty}</td>
+        <td style="text-align:right;">${Number(it.rate).toFixed(2)}</td>
+        <td style="text-align:right;">${Number(it.qty * it.rate).toFixed(
+          2
+        )}</td>
+      </tr>`
       )
       .join("");
 
+    const printWindow = window.open(
+      "",
+      "PRINT",
+      "width=350,height=500,top=100,left=100,toolbar=no,menubar=no,scrollbars=no,resizable=no"
+    );
+
     const html = `
-      <html><head><title>Invoice</title></head>
+    <html>
+      <head>
+        <title>Invoice Receipt</title>
+        <style>
+          @media print {
+            body { -webkit-print-color-adjust: exact; }
+          }
+          body {
+            font-family: monospace;
+            width: 100%;
+            padding: 10px;
+            margin: 0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+          }
+          .receipt {
+            width:260px;
+          }
+          .center { text-align: center; }
+          table { width: 100%; font-size: 13px; border-collapse: collapse; }
+          td, th { padding:4px 0; }
+          hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }
+        </style>
+      </head>
+
       <body>
-        <h2>Invoice</h2>
-        <p><b>No:</b> ${inv.invoiceNo}</p>
-        <p><b>Date:</b> ${inv.invoiceDate}</p>
-        <p><b>Customer:</b> ${inv.customerName}</p>
+        <div class="receipt">
+          <div class="center">
+            <h3 style="margin:0;">Vyapari CA</h3>
+            <div>Invoice Receipt</div>
+          </div>
 
-        <table border="1" width="100%" style="border-collapse:collapse;margin-top:10px">
-          <tr>
-            <th>#</th><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th>
-          </tr>
-          ${itemsHtml}
-          <tr><td colspan="4">Subtotal</td><td>${formatCurrency(
-            subtotal
-          )}</td></tr>
-          <tr><td colspan="4">GST</td><td>${formatCurrency(gst)}</td></tr>
-          <tr><td colspan="4"><b>Total</b></td><td><b>${formatCurrency(
-            total
-          )}</b></td></tr>
-        </table>
+          <p><b>Invoice No:</b> ${inv.invoiceNo}</p>
+          <p><b>Date:</b> ${inv.invoiceDate}</p>
+          <p><b>Customer:</b> ${escapeHtml(inv.customerName)}</p>
 
-        <button onclick="window.print()" style="margin-top:15px">Print</button>
+          <hr />
+
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">Item</th>
+                <th style="text-align:center;">Qty</th>
+                <th style="text-align:right;">Rate</th>
+                <th style="text-align:right;">Amt</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <hr />
+
+          <p><b>Subtotal:</b> ₹${subtotal.toFixed(2)}</p>
+          <p><b>GST (${inv.gstPercent}%):</b> ₹${gst.toFixed(2)}</p>
+          <p><b>Total:</b> ₹${total.toFixed(2)}</p>
+
+          <hr />
+
+          <div class="center">
+            <p>Thank you!</p>
+            <p>Visit Again</p>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(() => {
+              window.print();
+              setTimeout(() => window.close(), 600);
+            }, 250);
+          };
+        </script>
       </body>
-      </html>
-    `;
+    </html>
+  `;
 
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
+    printWindow.document.write(html);
+    printWindow.document.close();
   }
 
-  // page navigation
+  // --------------------
+  // Page navigation
+  // --------------------
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
@@ -283,7 +624,9 @@ export default function InvoicePage() {
   const formGST = calcGST(formSubtotal, form.gstPercent);
   const formTotal = calcTotal(formSubtotal, form.gstPercent);
 
+  // --------------------
   // UI START
+  // --------------------
   return (
     <div className="p-5 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -300,17 +643,17 @@ export default function InvoicePage() {
 
           <button
             onClick={openAddModal}
-            className="px-4 py-2 bg-indigo-600 text-white rounded"
+            className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-2"
           >
-            <Plus className="w-4 h-4 inline" /> Add Invoice
+            <Plus className="w-4 h-4" /> Add Invoice
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100">
+      <div className="w-full overflow-x-auto rounded-xl shadow bg-white">
+        <table className="min-w-[900px] w-full table-auto">
+          <thead>
             <tr>
               <th className="p-3 text-left">Sr</th>
               <th className="p-3 text-left">Invoice No</th>
@@ -343,7 +686,7 @@ export default function InvoicePage() {
                   <td className="p-3 text-center">
                     <span
                       className={`px-3 py-1 rounded text-xs ${
-                        inv.status === "Full Paid"
+                        inv.status === "Paid"
                           ? "bg-green-200 text-green-700"
                           : inv.status === "UnPaid"
                           ? "bg-red-200 text-red-700"
@@ -359,20 +702,51 @@ export default function InvoicePage() {
                       <button
                         onClick={() => openEditModal(inv)}
                         className="text-blue-600"
+                        title="Edit"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
 
+                      {/* Print (POS) */}
                       <button
-                        onClick={() => openPrintWindow(inv)}
+                        onClick={() => openPOSPrint(inv)}
                         className="text-green-600"
+                        title="Print (POS)"
                       >
                         <Printer className="w-4 h-4" />
+                      </button>
+
+                      {/* WhatsApp Text */}
+                      <button
+                        onClick={() => shareAsText(inv)}
+                        className="text-green-700"
+                        title="Share as WhatsApp Text"
+                      >
+                        <Smartphone className="w-4 h-4" />
+                      </button>
+
+                      {/* Share as Image */}
+                      <button
+                        onClick={() => shareAsImage(inv)}
+                        className="text-indigo-600"
+                        title="Share as Image"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+
+                      {/* Share as PDF */}
+                      <button
+                        onClick={() => shareAsPDF(inv)}
+                        className="text-indigo-800"
+                        title="Share as PDF"
+                      >
+                        <FileText className="w-4 h-4" />
                       </button>
 
                       <button
                         onClick={() => confirmDelete(inv.id)}
                         className="text-red-600"
+                        title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -522,7 +896,7 @@ export default function InvoicePage() {
                     value={form.status}
                     onChange={(e) => updateFormField("status", e.target.value)}
                   >
-                    <option>Full Paid</option>
+                    <option>Paid</option>
                     <option>UnPaid</option>
                     <option>Partial</option>
                   </select>
@@ -544,7 +918,7 @@ export default function InvoicePage() {
 
                 <div className="mt-3 space-y-2">
                   {form.items.map((it, idx) => (
-                    <div className="grid grid-cols-12 gap-2">
+                    <div className="grid grid-cols-12 gap-2" key={idx}>
                       <input
                         className="col-span-6 border p-2 rounded"
                         value={it.desc}

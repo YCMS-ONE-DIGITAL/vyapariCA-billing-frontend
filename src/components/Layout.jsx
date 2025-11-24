@@ -9,9 +9,9 @@ const Layout = () => {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Search keywords and their routes
+  // Search keywords
   const pageRoutes = {
     dashboard: "/app/dashboard",
     clients: "/app/clients",
@@ -25,40 +25,48 @@ const Layout = () => {
     business: "/app/my-business",
   };
 
-  // Auto-redirect when search text matches page name
+  // Auto redirect
   useEffect(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return;
-
-    if (pageRoutes[query]) {
-      navigate(pageRoutes[query]);
-    }
+    if (pageRoutes[query]) navigate(pageRoutes[query]);
   }, [searchQuery]);
 
   return (
     <div className="flex w-full h-screen overflow-hidden">
-      {/* Sidebar */}
+      {/* --------------- Sidebar (Mobile + Desktop) ---------------- */}
+      <div
+        className={`fixed md:static z-50 h-full transform transition-transform duration-300 
+          ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          }`}
+      >
+        <Sidebar onClose={() => setSidebarOpen(false)} />
+      </div>
+
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="h-full">
-          <Sidebar />
-        </div>
+        <div
+          className="fixed inset-0 bg-opacity-40 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* Right Area */}
+      {/* --------------- Right Area ---------------- */}
       <div className="flex flex-col flex-1 h-full bg-gray-100 overflow-hidden">
         {/* Header */}
-        <header className="w-full flex justify-between items-center px-6 py-4 bg-white shadow flex-shrink-0">
+        <header className="w-full flex justify-between items-center px-6 py-4 bg-white shadow">
           <div className="flex items-center gap-4">
+            {/* Mobile menu */}
             <Menu
               size={26}
-              className="cursor-pointer text-gray-700"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="cursor-pointer text-gray-700 md:hidden"
+              onClick={() => setSidebarOpen(true)}
             />
 
             <h2 className="text-xl font-semibold">Vyapari CA</h2>
           </div>
 
-          <div className="relative w-72">
+          <div className="relative w-60 md:w-72">
             <Search
               className="absolute left-3 top-2.5 text-gray-500"
               size={18}
@@ -66,14 +74,14 @@ const Layout = () => {
             <input
               type="text"
               placeholder="Search pages..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none bg-gray-100 focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none bg-gray-100"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </header>
 
-        {/* Main Page Content */}
+        {/* Page Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <AnimatePresence mode="wait">
             <motion.div

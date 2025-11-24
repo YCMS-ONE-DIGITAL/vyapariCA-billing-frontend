@@ -323,18 +323,18 @@ export default function ProductPage() {
       </div>
 
       {/* TABLE (Desktop) */}
-      <div className="hidden sm:block bg-white rounded-xl shadow overflow-x-auto">
-        <table className="min-w-full">
+      <div className="block bg-white rounded-xl shadow overflow-x-auto w-full">
+        <table className="min-w-[900px] w-full">
           <thead className="bg-gray-100">
             <tr>
               <th className="px-4 py-2 text-xs font-bold">SR</th>
               <th className="px-4 py-2 text-left text-xs font-bold">
                 Product Name
               </th>
-              <th className="px-4 py-2 text-xs font-bold">HSN</th>
-              <th className="px-4 py-2 text-xs font-bold">Price</th>
-              <th className="px-4 py-2 text-xs font-bold">Tax</th>
-              <th className="px-4 py-2 text-xs font-bold">Inv</th>
+              <th className="px-4 py-2 text-xs font-bold text-center">HSN</th>
+              <th className="px-4 py-2 text-xs font-bold text-center">Price</th>
+              <th className="px-4 py-2 text-xs font-bold text-center">Tax</th>
+              <th className="px-4 py-2 text-xs font-bold text-center">Inv</th>
               <th className="px-4 py-2 text-xs font-bold text-center">
                 Action
               </th>
@@ -345,10 +345,19 @@ export default function ProductPage() {
             {filtered.map((p, index) => (
               <tr key={p.id} className="border-b hover:bg-gray-50">
                 <td className="px-4 py-2 text-center">{index + 1}</td>
+
                 <td className="px-4 py-2">{p.product_name}</td>
+
                 <td className="px-4 py-2 text-center">{p.hsn_sac}</td>
-                <td className="px-4 py-2 text-right">₹ {p.price}</td>
+
+                {/* PRICE FIXED — PERFECT CENTER ALIGNMENT */}
+                <td className="px-4 py-2 text-center">
+                  <span className="inline-block w-full">₹ {p.price}</span>
+                </td>
+
+                {/* TAX FIXED */}
                 <td className="px-4 py-2 text-center">{p.tax_percent}%</td>
+
                 <td className="px-4 py-2 text-center">
                   {p.track_inventory === "on" ? "On" : "Off"}
                 </td>
@@ -372,36 +381,6 @@ export default function ProductPage() {
             ))}
           </tbody>
         </table>
-      </div>
-
-      {/* MOBILE CARD VIEW */}
-      <div className="sm:hidden space-y-3">
-        {filtered.map((p, index) => (
-          <div key={p.id} className="bg-white shadow rounded-lg p-4 border">
-            <div className="flex justify-between">
-              <span className="text-sm font-bold">
-                #{index + 1} — {p.product_name}
-              </span>
-
-              <div className="flex gap-2">
-                <button onClick={() => handleEdit(p)}>
-                  <Edit className="w-5 h-5 text-indigo-600" />
-                </button>
-
-                <button onClick={() => handleDelete(p.id)}>
-                  <Trash2 className="w-5 h-5 text-red-600" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-2 text-sm text-gray-700">
-              <p>HSN: {p.hsn_sac}</p>
-              <p>Price: ₹ {p.price}</p>
-              <p>Tax: {p.tax_percent}%</p>
-              <p>Inventory: {p.track_inventory === "on" ? "On" : "Off"}</p>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Modal */}

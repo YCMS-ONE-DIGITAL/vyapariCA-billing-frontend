@@ -9,7 +9,7 @@ const SAMPLE_INVOICES = [
     invoiceNo: "INV-001",
     date: "2025-01-05",
     customer: "Rahul Sharma",
-    status: "Full Paid",
+    status: "Paid",
     items: [
       { desc: "Product A", qty: 2, rate: 1000 },
       { desc: "Service B", qty: 1, rate: 3000 },
@@ -26,7 +26,7 @@ const SAMPLE_INVOICES = [
 ];
 
 const STATUS_COLORS = {
-  "Full Paid": "bg-green-600",
+  Paid: "bg-green-600",
   UnPaid: "bg-red-600",
   Partial: "bg-yellow-500",
 };
@@ -79,60 +79,96 @@ export default function BillingPage() {
 
     const itemsHtml = (inv.items || [])
       .map(
-        (it, idx) => `<tr>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center">${
-            idx + 1
-          }</td>
-          <td style="padding:8px;border:1px solid #ddd">${it.desc}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center">${
-            it.qty
-          }</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:right">${formatCurrency(
-            it.rate
-          )}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:right">${formatCurrency(
-            it.qty * it.rate
-          )}</td>
-        </tr>`
+        (it, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${it.desc}</td>
+        <td>${it.qty}</td>
+        <td>${it.rate}</td>
+        <td>${it.qty * it.rate}</td>
+      </tr>`
       )
       .join("");
 
     const subtotal = calcItemsTotal(inv.items || []);
-    const total = subtotal;
 
     const html = `
-      <!doctype html>
-      <html>
-      <head><meta charset="utf-8" /></head>
-      <body>
-      <h2>Invoice ${inv.invoiceNo}</h2>
-      <p>Customer: ${inv.customer}</p>
-      <p>Date: ${inv.date}</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:20px">
-      <thead><tr>
-        <th style="padding:8px;border:1px solid #ddd">#</th>
-        <th style="padding:8px;border:1px solid #ddd">Description</th>
-        <th style="padding:8px;border:1px solid #ddd">Qty</th>
-        <th style="padding:8px;border:1px solid #ddd">Rate</th>
-        <th style="padding:8px;border:1px solid #ddd">Total</th>
-      </tr></thead>
-      <tbody>${itemsHtml}</tbody>
-      </table>
-      <h3>Grand Total: ${formatCurrency(total)}</h3>
-      </body>
-      </html>
-    `;
+  <html>
+    <head>
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          height: 100vh;
+        }
 
-    const win = window.open("", "_blank", "width=900,height=700");
+        .receipt {
+          width: 58mm;
+          padding: 10px;
+        }
+
+        h2, p { margin: 4px 0; }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+
+        th, td {
+          border-bottom: 1px dashed #000;
+          padding: 6px 0;
+          text-align: left;
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="receipt">
+        <h2>VYAPARI CA</h2>
+        <p><strong>Invoice:</strong> ${inv.invoiceNo}</p>
+        <p><strong>Date:</strong> ${inv.date}</p>
+        <p><strong>Customer:</strong> ${inv.customer}</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Rate</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <h3>Total: ₹${subtotal}</h3>
+      </div>
+
+      <script>
+        window.onload = () => window.print();
+      </script>
+    </body>
+  </html>
+  `;
+
+    const win = window.open("", "_blank");
     win.document.write(html);
     win.document.close();
   };
+
 
   return (
     <div className="p-4 sm:p-6 text-gray-900">
       <h1 className="text-xl sm:text-2xl font-semibold mb-4">Billing</h1>
 
-      {/* ALWAYS TABLE — FOR ALL DEVICE SIZES */}
       <div className="overflow-x-auto rounded-xl shadow bg-white">
         <table className="min-w-full text-gray-900">
           <thead className="bg-gray-200">
@@ -141,7 +177,6 @@ export default function BillingPage() {
               <th className="p-3 text-left">Invoice No</th>
               <th className="p-3 text-left">Invoice Date</th>
               <th className="p-3 text-left">Customer</th>
-
               <th className="p-3 text-center">Amount</th>
               <th className="p-3 text-center">Status</th>
               <th className="p-3 text-center">Action</th>
@@ -156,11 +191,9 @@ export default function BillingPage() {
                   <td className="p-3">{inv.invoiceNo}</td>
                   <td className="p-3">{inv.date}</td>
                   <td className="p-3">{inv.customer}</td>
-
                   <td className="p-3 text-center font-semibold">
                     {formatCurrency(calcItemsTotal(inv.items))}
                   </td>
-
                   <td className="p-3 text-center">
                     <span
                       className={`text-white px-3 py-1 rounded-full text-sm ${
@@ -170,7 +203,6 @@ export default function BillingPage() {
                       {inv.status}
                     </span>
                   </td>
-
                   <td className="p-3 text-center flex justify-center gap-4">
                     <button
                       onClick={() => handlePrint(inv.id)}
