@@ -651,7 +651,7 @@ export default function InvoicePage() {
       </div>
 
       {/* Table */}
-      <div className="w-full overflow-x-auto rounded-xl shadow bg-white">
+      <div className="w-full overflow-x-auto rounded-xl shadow bg-whitecd vyapari">
         <table className="min-w-[900px] w-full table-auto">
           <thead>
             <tr>
@@ -659,7 +659,7 @@ export default function InvoicePage() {
               <th className="p-3 text-left">Invoice No</th>
               <th className="p-3 text-left">Date</th>
               <th className="p-3 text-left">Customer</th>
-              <th className="p-3 text-right">Amount</th>
+              <th className="p-3 text-center">Amount</th>
               <th className="p-3 text-center">Status</th>
               <th className="p-3 text-center">Action</th>
             </tr>
@@ -679,7 +679,7 @@ export default function InvoicePage() {
                   <td className="p-3 font-semibold">{inv.invoiceNo}</td>
                   <td className="p-3">{inv.invoiceDate}</td>
                   <td className="p-3">{inv.customerName}</td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-center">
                     {formatCurrency(inv.amount)}
                   </td>
 
@@ -714,15 +714,6 @@ export default function InvoicePage() {
                         title="Print (POS)"
                       >
                         <Printer className="w-4 h-4" />
-                      </button>
-
-                      {/* WhatsApp Text */}
-                      <button
-                        onClick={() => shareAsText(inv)}
-                        className="text-green-700"
-                        title="Share as WhatsApp Text"
-                      >
-                        <Smartphone className="w-4 h-4" />
                       </button>
 
                       {/* Share as Image */}

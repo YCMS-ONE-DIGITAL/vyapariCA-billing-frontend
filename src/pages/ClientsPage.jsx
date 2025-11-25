@@ -1,3 +1,4 @@
+// ClientsPage.jsx (Updated with LOCATION)
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useOutletContext } from "react-router-dom";
@@ -11,12 +12,14 @@ const ClientsPage = () => {
       id: 1,
       name: "Rahul Sharma",
       email: "rahul@gmail.com",
+      location: "Pune",
       phone: "9876543210",
     },
     {
       id: 2,
       name: "Priya Patel",
       email: "priya@gmail.com",
+      location: "Mumbai",
       phone: "9876501234",
     },
   ]);
@@ -25,8 +28,10 @@ const ClientsPage = () => {
   const [newClient, setNewClient] = useState({
     name: "",
     email: "",
+    location: "",
     phone: "",
   });
+
   const [editClientId, setEditClientId] = useState(null);
 
   useEffect(() => {
@@ -34,7 +39,12 @@ const ClientsPage = () => {
   }, [showModal]);
 
   const addOrUpdateClient = () => {
-    if (!newClient.name || !newClient.email || !newClient.phone) {
+    if (
+      !newClient.name ||
+      !newClient.email ||
+      !newClient.location ||
+      !newClient.phone
+    ) {
       alert("Please fill all fields");
       return;
     }
@@ -49,7 +59,7 @@ const ClientsPage = () => {
       setClients([...clients, { id: Date.now(), ...newClient }]);
     }
 
-    setNewClient({ name: "", email: "", phone: "" });
+    setNewClient({ name: "", email: "", location: "", phone: "" });
     setEditClientId(null);
     setShowModal(false);
   };
@@ -58,6 +68,7 @@ const ClientsPage = () => {
     setNewClient({
       name: client.name,
       email: client.email,
+      location: client.location,
       phone: client.phone,
     });
     setEditClientId(client.id);
@@ -77,31 +88,30 @@ const ClientsPage = () => {
       transition={{ duration: 0.3 }}
       className="p-4 sm:p-6"
     >
-      <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 text-gray-800">
-        Clients
-      </h1>
+      <h1 className="text-xl sm:text-2xl font-semibold mb-4">Clients</h1>
 
       <div className="flex justify-end mb-4 sm:mb-6">
         <button
-          className="bg-blue-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg hover:bg-blue-700 shadow-md transition-all text-sm sm:text-base"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md"
           onClick={() => {
             setShowModal(true);
             setEditClientId(null);
-            setNewClient({ name: "", email: "", phone: "" });
+            setNewClient({ name: "", email: "", location: "", phone: "" });
           }}
         >
           + Add Client
         </button>
       </div>
 
-      {/* ALWAYS VISIBLE TABLE (ALL DEVICES) */}
+      {/* TABLE */}
       <div className="overflow-x-auto bg-white rounded-xl shadow-xl border border-gray-200">
-        <table className="w-full min-w-[600px]">
+        <table className="w-full min-w-[700px]">
           <thead>
             <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <th className="p-3 text-left">Sr.No</th>
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Location</th>
               <th className="p-3 text-left">Phone</th>
               <th className="p-3 text-center">Actions</th>
             </tr>
@@ -109,13 +119,11 @@ const ClientsPage = () => {
 
           <tbody>
             {filteredClients.map((client, index) => (
-              <tr
-                key={client.id}
-                className="border-t hover:bg-gray-100 transition"
-              >
+              <tr key={client.id} className="border-t hover:bg-gray-100">
                 <td className="p-3">{index + 1}</td>
                 <td className="p-3">{client.name}</td>
                 <td className="p-3">{client.email}</td>
+                <td className="p-3">{client.location}</td>
                 <td className="p-3">{client.phone}</td>
 
                 <td className="p-3 text-center flex justify-center gap-4">
@@ -125,7 +133,6 @@ const ClientsPage = () => {
                       className="text-blue-600 hover:text-blue-800"
                     />
                   </button>
-
                   <button onClick={() => deleteClient(client.id)}>
                     <Trash2
                       size={20}
@@ -138,7 +145,7 @@ const ClientsPage = () => {
 
             {filteredClients.length === 0 && (
               <tr>
-                <td colSpan="5" className="text-center p-6 text-gray-500">
+                <td colSpan="6" className="text-center p-6 text-gray-500">
                   No clients found
                 </td>
               </tr>
@@ -147,7 +154,7 @@ const ClientsPage = () => {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 flex justify-center items-center z-50 px-4">
           <div
@@ -186,6 +193,16 @@ const ClientsPage = () => {
 
             <input
               type="text"
+              placeholder="Location"
+              className="border w-full px-3 py-2 rounded-lg mb-3"
+              value={newClient.location}
+              onChange={(e) =>
+                setNewClient({ ...newClient, location: e.target.value })
+              }
+            />
+
+            <input
+              type="text"
               placeholder="Phone"
               className="border w-full px-3 py-2 rounded-lg mb-5"
               value={newClient.phone}
@@ -201,6 +218,7 @@ const ClientsPage = () => {
               >
                 Cancel
               </button>
+
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg"
                 onClick={addOrUpdateClient}

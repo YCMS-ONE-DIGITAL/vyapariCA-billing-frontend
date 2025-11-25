@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Plus, Trash2, Edit, Tag, Search, X } from "lucide-react";
 
 // ---------------------------------------------------------------------
-// Modal Component (NO CHANGE except responsive improvements)
+// Modal Component
 // ---------------------------------------------------------------------
 const ProductFormModal = ({
   isOpen,
@@ -16,6 +16,7 @@ const ProductFormModal = ({
     shop_id: loggedInShopId || "",
     sku: "",
     product_name: "",
+    brand_name: "", // ✅ NEW FIELD
     hsn_sac: "",
     price: "",
     mrp: "",
@@ -33,6 +34,7 @@ const ProductFormModal = ({
         ...productToEdit,
         price: String(productToEdit.price),
         mrp: String(productToEdit.mrp),
+        brand_name: productToEdit.brand_name || "",
         tax_percent: String(productToEdit.tax_percent),
         stock:
           productToEdit.stock !== undefined && productToEdit.stock !== null
@@ -107,6 +109,18 @@ const ProductFormModal = ({
                 onChange={handleChange}
                 className="w-full border rounded-lg p-2 mt-1"
                 placeholder="Product name"
+              />
+            </div>
+
+            {/* ✅ NEW BRAND FIELD */}
+            <div>
+              <label className="text-sm font-medium">Brand Name</label>
+              <input
+                name="brand_name"
+                value={formData.brand_name}
+                onChange={handleChange}
+                className="w-full border rounded-lg p-2 mt-1"
+                placeholder="Brand name"
               />
             </div>
 
@@ -223,7 +237,7 @@ const ProductFormModal = ({
 };
 
 // ---------------------------------------------------------------------
-// Product Page with FULL MOBILE UI + SR NO.
+// Product Page with BRAND COLUMN
 // ---------------------------------------------------------------------
 export default function ProductPage() {
   const loggedInShopId = "SHOP12345";
@@ -234,6 +248,7 @@ export default function ProductPage() {
       shop_id: loggedInShopId,
       sku: "TALLY-AMC",
       product_name: "Tally AMC",
+      brand_name: "Tally", // NEW
       hsn_sac: "9982",
       price: 15000,
       mrp: 15000,
@@ -247,6 +262,7 @@ export default function ProductPage() {
       shop_id: loggedInShopId,
       sku: "LED-M27",
       product_name: "27-inch Monitor",
+      brand_name: "Samsung", // NEW
       hsn_sac: "8471",
       price: 22500,
       mrp: 25000,
@@ -322,15 +338,17 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* TABLE (Desktop) */}
+      {/* TABLE */}
       <div className="block bg-white rounded-xl shadow overflow-x-auto w-full">
-        <table className="min-w-[900px] w-full">
+        <table className="min-w-[1050px] w-full">
           <thead className="bg-gray-100">
             <tr>
               <th className="px-4 py-2 text-xs font-bold">SR</th>
-              <th className="px-4 py-2 text-left text-xs font-bold">
-                Product Name
-              </th>
+              <th className="px-4 py-2 text-xs font-bold">Product Name</th>
+
+              {/* ✅ NEW BRAND COLUMN */}
+              <th className="px-4 py-2 text-xs font-bold">Brand</th>
+
               <th className="px-4 py-2 text-xs font-bold text-center">HSN</th>
               <th className="px-4 py-2 text-xs font-bold text-center">Price</th>
               <th className="px-4 py-2 text-xs font-bold text-center">Tax</th>
@@ -346,16 +364,15 @@ export default function ProductPage() {
               <tr key={p.id} className="border-b hover:bg-gray-50">
                 <td className="px-4 py-2 text-center">{index + 1}</td>
 
-                <td className="px-4 py-2">{p.product_name}</td>
+                <td className="px-4 py-2 text-center">{p.product_name}</td>
+
+                {/* BRAND */}
+                <td className="px-4 py-2 text-center">{p.brand_name || "-"}</td>
 
                 <td className="px-4 py-2 text-center">{p.hsn_sac}</td>
 
-                {/* PRICE FIXED — PERFECT CENTER ALIGNMENT */}
-                <td className="px-4 py-2 text-center">
-                  <span className="inline-block w-full">₹ {p.price}</span>
-                </td>
+                <td className="px-4 py-2 text-center">₹ {p.price}</td>
 
-                {/* TAX FIXED */}
                 <td className="px-4 py-2 text-center">{p.tax_percent}%</td>
 
                 <td className="px-4 py-2 text-center">

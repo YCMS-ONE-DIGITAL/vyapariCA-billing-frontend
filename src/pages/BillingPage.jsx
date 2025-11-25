@@ -1,7 +1,7 @@
-// BillingPage.jsx (Table Only - Responsive on All Devices)
+// BillingPage.jsx (With POS View Bill Modal)
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Printer, Trash2 } from "lucide-react";
+import { Printer, Trash2, Eye } from "lucide-react";
 
 const SAMPLE_INVOICES = [
   {
@@ -49,6 +49,8 @@ export default function BillingPage() {
 
   const [deleteId, setDeleteId] = useState(null);
 
+  const [viewInvoice, setViewInvoice] = useState(null);
+
   useEffect(() => {
     localStorage.setItem("vyapari_invoices", JSON.stringify(invoices));
   }, [invoices]);
@@ -73,10 +75,7 @@ export default function BillingPage() {
       inv.customer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handlePrint = (invoiceId) => {
-    const inv = invoices.find((i) => i.id === invoiceId);
-    if (!inv) return;
-
+  const handlePrint = (inv) => {
     const itemsHtml = (inv.items || [])
       .map(
         (it, idx) => `
@@ -96,40 +95,15 @@ export default function BillingPage() {
   <html>
     <head>
       <style>
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: Arial;
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-          height: 100vh;
-        }
-
-        .receipt {
-          width: 58mm;
-          padding: 10px;
-        }
-
-        h2, p { margin: 4px 0; }
-
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 12px;
-        }
-
-        th, td {
-          border-bottom: 1px dashed #000;
-          padding: 6px 0;
-          text-align: left;
-        }
+        body { margin:0; padding:0; font-family: Arial; }
+        .receipt { width:58mm; padding:10px; margin: 0 auto; text-align: center; }
+        table { width:100%; font-size:12px; border-collapse:collapse; }
+        th, td { padding:4px 0; border-bottom:1px dashed #000; }
       </style>
     </head>
-
     <body>
       <div class="receipt">
-        <h2>VYAPARI CA</h2>
+        <h2 style="text-align:center">VYAPARI CA</h2>
         <p><strong>Invoice:</strong> ${inv.invoiceNo}</p>
         <p><strong>Date:</strong> ${inv.date}</p>
         <p><strong>Customer:</strong> ${inv.customer}</p>
@@ -137,16 +111,10 @@ export default function BillingPage() {
         <table>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Description</th>
-              <th>Qty</th>
-              <th>Rate</th>
-              <th>Total</th>
+              <th>#</th><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th>
             </tr>
           </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
+          <tbody>${itemsHtml}</tbody>
         </table>
 
         <h3>Total: ₹${subtotal}</h3>
@@ -163,7 +131,6 @@ export default function BillingPage() {
     win.document.write(html);
     win.document.close();
   };
-
 
   return (
     <div className="p-4 sm:p-6 text-gray-900">
@@ -203,14 +170,26 @@ export default function BillingPage() {
                       {inv.status}
                     </span>
                   </td>
+
+                  {/* ACTION BUTTONS */}
                   <td className="p-3 text-center flex justify-center gap-4">
+                    {/* VIEW BILL */}
                     <button
-                      onClick={() => handlePrint(inv.id)}
+                      onClick={() => setViewInvoice(inv)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <Eye size={20} />
+                    </button>
+
+                    {/* PRINT */}
+                    <button
+                      onClick={() => handlePrint(inv)}
                       className="text-green-600 hover:text-green-800"
                     >
                       <Printer size={20} />
                     </button>
 
+                    {/* DELETE */}
                     <button
                       onClick={() => confirmDelete(inv.id)}
                       className="text-red-600 hover:text-red-800"
@@ -230,6 +209,69 @@ export default function BillingPage() {
           </tbody>
         </table>
       </div>
+
+      {/* =============== VIEW BILL MODAL (POS STYLE) =============== */}
+      {viewInvoice && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white w-full max-w-xs rounded-lg p-4 shadow-lg">
+            <div className="text-center text-lg font-bold mb-2">VYAPARI CA</div>
+
+            <p>
+              <strong>Invoice:</strong> {viewInvoice.invoiceNo}
+            </p>
+            <p>
+              <strong>Date:</strong> {viewInvoice.date}
+            </p>
+            <p>
+              <strong>Customer:</strong> {viewInvoice.customer}
+            </p>
+
+            <hr className="my-3" />
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-1">Item</th>
+                  <th className="text-center py-1">Qty</th>
+                  <th className="text-center py-1">Rate</th>
+                  <th className="text-right py-1">Total</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {viewInvoice.items.map((it, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="py-1">{it.desc}</td>
+                    <td className="py-1 text-center">{it.qty}</td>
+                    <td className="py-1 text-center">{it.rate}</td>
+                    <td className="py-1 text-right">{it.qty * it.rate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h3 className="text-right text-lg font-semibold mt-3">
+              Total: ₹{calcItemsTotal(viewInvoice.items)}
+            </h3>
+
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={() => setViewInvoice(null)}
+                className="px-4 py-2 bg-gray-300 rounded"
+              >
+                Close
+              </button>
+
+              <button
+                onClick={() => handlePrint(viewInvoice)}
+                className="px-4 py-2 bg-green-600 text-white rounded"
+              >
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DELETE MODAL */}
       {deleteId != null && (

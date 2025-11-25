@@ -36,7 +36,7 @@ const DashboardPage = () => {
 
         <div className="bg-white p-6 rounded-xl shadow">
           <h3 className="text-lg font-bold text-green-600">
-            Invoices Generated
+            Total Invoices
           </h3>
           <p className="text-2xl font-bold">145</p>
         </div>
