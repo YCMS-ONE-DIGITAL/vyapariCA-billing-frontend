@@ -136,31 +136,33 @@ export default function BillingPage() {
     <div className="p-4 sm:p-6 text-gray-900">
       <h1 className="text-xl sm:text-2xl font-semibold mb-4">Billing</h1>
 
-      <div className="overflow-x-auto rounded-xl shadow bg-white">
-        <table className="min-w-full text-gray-900">
-          <thead className="bg-gray-200">
-            <tr>
+      <div className="overflow-x-auto bg-white rounded-xl shadow-xl border border-gray-200">
+        <table className="w-full min-w-[800px]">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <th className="p-3 text-left">Sr.No</th>
               <th className="p-3 text-left">Invoice No</th>
               <th className="p-3 text-left">Invoice Date</th>
               <th className="p-3 text-left">Customer</th>
               <th className="p-3 text-center">Amount</th>
               <th className="p-3 text-center">Status</th>
-              <th className="p-3 text-center">Action</th>
+              <th className="p-3 text-center">Actions</th>
             </tr>
           </thead>
 
           <tbody>
             {filtered.length ? (
               filtered.map((inv, idx) => (
-                <tr key={inv.id} className="border-b hover:bg-gray-100">
+                <tr key={inv.id} className="border-t hover:bg-gray-100">
                   <td className="p-3">{idx + 1}</td>
                   <td className="p-3">{inv.invoiceNo}</td>
                   <td className="p-3">{inv.date}</td>
                   <td className="p-3">{inv.customer}</td>
+
                   <td className="p-3 text-center font-semibold">
                     {formatCurrency(calcItemsTotal(inv.items))}
                   </td>
+
                   <td className="p-3 text-center">
                     <span
                       className={`text-white px-3 py-1 rounded-full text-sm ${
@@ -171,9 +173,8 @@ export default function BillingPage() {
                     </span>
                   </td>
 
-                  {/* ACTION BUTTONS */}
                   <td className="p-3 text-center flex justify-center gap-4">
-                    {/* VIEW BILL */}
+                    {/* VIEW */}
                     <button
                       onClick={() => setViewInvoice(inv)}
                       className="text-blue-600 hover:text-blue-800"
@@ -201,7 +202,7 @@ export default function BillingPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="p-4 text-center">
+                <td colSpan={7} className="text-center p-6 text-gray-500">
                   No invoices found
                 </td>
               </tr>

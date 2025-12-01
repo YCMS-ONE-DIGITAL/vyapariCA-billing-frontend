@@ -36,6 +36,18 @@ export default function SettingsPage() {
           pincode: "",
           logo: "",
 
+        
+          // PROFILE...
+          // BUSINESS...
+          
+          // CA SETTINGS
+          caName: "",
+          caNumber: "",
+          caEmail: "",
+          caAddress: "",
+          caFirmName: "",
+          caCertNumber: "",
+
           // SECURITY
           password: "",
         };
@@ -89,6 +101,16 @@ export default function SettingsPage() {
               }`}
             >
               Business Settings
+            </button>
+            <button
+              onClick={() => setActiveTab("ca")}
+              className={`text-left px-3 py-2 rounded-md font-medium ${
+                activeTab === "ca"
+                  ? "bg-blue-100 text-blue-700"
+                  : "hover:bg-gray-100"
+              }`}
+            >
+              CA Settings
             </button>
 
             <button
@@ -312,6 +334,62 @@ export default function SettingsPage() {
                     className="border p-2 rounded w-full"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ---------------------- CA SETTINGS SECTION ---------------------- */}
+          {activeTab === "ca" && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">CA Information</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="CA Full Name"
+                  value={profile.caName}
+                  onChange={(e) => updateField("caName", e.target.value)}
+                  className="border p-2 rounded w-full"
+                />
+
+                <input
+                  type="text"
+                  placeholder="CA Contact Number"
+                  value={profile.caNumber}
+                  onChange={(e) => updateField("caNumber", e.target.value)}
+                  className="border p-2 rounded w-full"
+                />
+
+                <input
+                  type="email"
+                  placeholder="CA Email"
+                  value={profile.caEmail}
+                  onChange={(e) => updateField("caEmail", e.target.value)}
+                  className="border p-2 rounded w-full"
+                />
+
+                <input
+                  type="text"
+                  placeholder="CA Firm Name"
+                  value={profile.caFirmName}
+                  onChange={(e) => updateField("caFirmName", e.target.value)}
+                  className="border p-2 rounded w-full"
+                />
+
+                <input
+                  type="text"
+                  placeholder="CA Certificate Number"
+                  value={profile.caCertNumber}
+                  onChange={(e) => updateField("caCertNumber", e.target.value)}
+                  className="border p-2 rounded w-full"
+                />
+
+                <textarea
+                  placeholder="CA Office Address"
+                  value={profile.caAddress}
+                  onChange={(e) => updateField("caAddress", e.target.value)}
+                  className="border p-2 rounded w-full"
+                />
               </div>
             </div>
           )}

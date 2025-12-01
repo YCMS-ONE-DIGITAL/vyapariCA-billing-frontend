@@ -1,8 +1,64 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Edit, Tag, Search, X } from "lucide-react";
+import { Plus, Trash2, Edit, Tag, Search, X, Eye } from "lucide-react";
 
 // ---------------------------------------------------------------------
-// Modal Component
+// VIEW PRODUCT MODAL (READ-ONLY)
+// ---------------------------------------------------------------------
+const ViewProductModal = ({ isOpen, onClose, product }) => {
+  if (!isOpen || !product) return null;
+
+  const fields = [
+    ["Product Name", product.product_name],
+    ["Brand", product.brand_name || "-"],
+    ["SKU", product.sku],
+    ["HSN / SAC", product.hsn_sac],
+    ["Price (₹)", product.price],
+    ["MRP (₹)", product.mrp],
+    ["GST (%)", product.GST + "%"],
+    ["Unit", product.unit],
+    ["Track Inventory", product.track_inventory === "on" ? "Yes" : "No"],
+    ["Stock", product.stock === null ? "-" : product.stock],
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-3">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div className="relative w-full max-w-lg bg-white rounded-xl shadow-lg p-6 z-10">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Product Details</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {fields.map(([label, value]) => (
+            <div key={label} className="border rounded-lg p-3 bg-gray-50">
+              <p className="text-xs text-gray-500 font-semibold">{label}</p>
+              <p className="text-sm font-medium mt-1">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 bg-indigo-600 text-white rounded-lg"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------
+// ADD / EDIT PRODUCT MODAL
 // ---------------------------------------------------------------------
 const ProductFormModal = ({
   isOpen,
@@ -16,11 +72,11 @@ const ProductFormModal = ({
     shop_id: loggedInShopId || "",
     sku: "",
     product_name: "",
-    brand_name: "", // ✅ NEW FIELD
+    brand_name: "",
     hsn_sac: "",
     price: "",
     mrp: "",
-    tax_percent: "",
+    GST: "",
     unit: "piece",
     track_inventory: "off",
     stock: "",
@@ -35,7 +91,7 @@ const ProductFormModal = ({
         price: String(productToEdit.price),
         mrp: String(productToEdit.mrp),
         brand_name: productToEdit.brand_name || "",
-        tax_percent: String(productToEdit.tax_percent),
+        GST: String(productToEdit.GST),
         stock:
           productToEdit.stock !== undefined && productToEdit.stock !== null
             ? String(productToEdit.stock)
@@ -69,7 +125,7 @@ const ProductFormModal = ({
       ...formData,
       price: Number(formData.price) || 0,
       mrp: Number(formData.mrp) || 0,
-      tax_percent: Number(formData.tax_percent) || 0,
+      GST: Number(formData.GST) || 0,
       stock: formData.stock === "" ? null : Number(formData.stock),
     };
 
@@ -112,7 +168,6 @@ const ProductFormModal = ({
               />
             </div>
 
-            {/* ✅ NEW BRAND FIELD */}
             <div>
               <label className="text-sm font-medium">Brand Name</label>
               <input
@@ -158,11 +213,11 @@ const ProductFormModal = ({
             </div>
 
             <div>
-              <label className="text-sm font-medium">Tax (%)</label>
+              <label className="text-sm font-medium">GST (%)</label>
               <input
                 type="number"
-                name="tax_percent"
-                value={formData.tax_percent}
+                name="GST"
+                value={formData.GST}
                 onChange={handleChange}
                 className="w-full border rounded-lg p-2 mt-1"
               />
@@ -237,7 +292,7 @@ const ProductFormModal = ({
 };
 
 // ---------------------------------------------------------------------
-// Product Page with BRAND COLUMN
+// PRODUCT PAGE
 // ---------------------------------------------------------------------
 export default function ProductPage() {
   const loggedInShopId = "SHOP12345";
@@ -248,11 +303,11 @@ export default function ProductPage() {
       shop_id: loggedInShopId,
       sku: "TALLY-AMC",
       product_name: "Tally AMC",
-      brand_name: "Tally", // NEW
+      brand_name: "Tally",
       hsn_sac: "9982",
       price: 15000,
       mrp: 15000,
-      tax_percent: 18,
+      GST: 18,
       unit: "service",
       track_inventory: "off",
       stock: null,
@@ -262,11 +317,11 @@ export default function ProductPage() {
       shop_id: loggedInShopId,
       sku: "LED-M27",
       product_name: "27-inch Monitor",
-      brand_name: "Samsung", // NEW
+      brand_name: "Samsung",
       hsn_sac: "8471",
       price: 22500,
       mrp: 25000,
-      tax_percent: 28,
+      GST: 28,
       unit: "piece",
       track_inventory: "on",
       stock: 12,
@@ -275,6 +330,10 @@ export default function ProductPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [productToView, setProductToView] = useState(null);
+
   const [search, setSearch] = useState("");
 
   const filtered = products.filter((p) =>
@@ -333,7 +392,7 @@ export default function ProductPage() {
             onClick={openCreate}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" /> Add
+            <Plus className="w-4 h-4" /> ADD Product
           </button>
         </div>
       </div>
@@ -345,13 +404,10 @@ export default function ProductPage() {
             <tr>
               <th className="px-4 py-2 text-xs font-bold">SR</th>
               <th className="px-4 py-2 text-xs font-bold">Product Name</th>
-
-              {/* ✅ NEW BRAND COLUMN */}
               <th className="px-4 py-2 text-xs font-bold">Brand</th>
-
               <th className="px-4 py-2 text-xs font-bold text-center">HSN</th>
               <th className="px-4 py-2 text-xs font-bold text-center">Price</th>
-              <th className="px-4 py-2 text-xs font-bold text-center">Tax</th>
+              <th className="px-4 py-2 text-xs font-bold text-center">GST</th>
               <th className="px-4 py-2 text-xs font-bold text-center">Inv</th>
               <th className="px-4 py-2 text-xs font-bold text-center">
                 Action
@@ -366,20 +422,31 @@ export default function ProductPage() {
 
                 <td className="px-4 py-2 text-center">{p.product_name}</td>
 
-                {/* BRAND */}
                 <td className="px-4 py-2 text-center">{p.brand_name || "-"}</td>
 
                 <td className="px-4 py-2 text-center">{p.hsn_sac}</td>
 
                 <td className="px-4 py-2 text-center">₹ {p.price}</td>
 
-                <td className="px-4 py-2 text-center">{p.tax_percent}%</td>
+                <td className="px-4 py-2 text-center">{p.GST}%</td>
 
                 <td className="px-4 py-2 text-center">
                   {p.track_inventory === "on" ? "On" : "Off"}
                 </td>
 
-                <td className="px-4 py-2 text-center">
+                <td className="px-4 py-2 text-center flex items-center justify-center gap-2">
+                  {/* VIEW BUTTON */}
+                  <button
+                    onClick={() => {
+                      setProductToView(p);
+                      setIsViewOpen(true);
+                    }}
+                    className="text-blue-600 p-1"
+                  >
+                    <Eye className="w-5 h-5" />
+                  </button>
+
+                  {/* EDIT BUTTON */}
                   <button
                     onClick={() => handleEdit(p)}
                     className="text-indigo-600 p-1"
@@ -387,6 +454,7 @@ export default function ProductPage() {
                     <Edit className="w-5 h-5" />
                   </button>
 
+                  {/* DELETE BUTTON */}
                   <button
                     onClick={() => handleDelete(p.id)}
                     className="text-red-600 p-1"
@@ -400,13 +468,20 @@ export default function ProductPage() {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       <ProductFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         productToEdit={productToEdit}
         loggedInShopId={loggedInShopId}
         onSave={handleSave}
+      />
+
+      {/* View Modal */}
+      <ViewProductModal
+        isOpen={isViewOpen}
+        onClose={() => setIsViewOpen(false)}
+        product={productToView}
       />
     </div>
   );
