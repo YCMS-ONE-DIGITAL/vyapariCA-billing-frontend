@@ -9,6 +9,8 @@ import {
   Settings,
   LogOut,
   Building2,
+  CreditCard,
+  IndianRupee,
 } from "lucide-react";
 
 const Sidebar = ({ onClose }) => {
@@ -60,6 +62,12 @@ const Sidebar = ({ onClose }) => {
               to="/app/products"
               icon={<ShoppingBag size={18} />}
               label="Products"
+              onClose={onClose}
+            />
+            <SidebarItem
+              to="/app/payment"
+              icon={<IndianRupee size={18} />}
+              label="Payment"
               onClose={onClose}
             />
             <SidebarItem

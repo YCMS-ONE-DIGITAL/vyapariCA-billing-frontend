@@ -540,44 +540,6 @@ export default function ReportsAdvanced() {
         </div>
       </div>
 
-      {/* Recent transactions table (scrollable on mobile) */}
-      <div className="bg-white p-4 rounded-xl shadow mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Recent Transactions</h3>
-          <div className="text-sm text-gray-500">Latest first</div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-2 text-left">Sr.No</th>
-                <th className="p-2 text-left">Date</th>
-                <th className="p-2 text-left">Client</th>
-                <th className="p-2 text-left">Amount</th>
-                <th className="p-2 text-left">Mode</th>
-                <th className="p-2 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered
-                .slice()
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .map((t, i) => (
-                  <tr key={t.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">{i + 1}</td>
-                    <td className="p-2">{t.date}</td>
-                    <td className="p-2">{t.client}</td>
-                    <td className="p-2">
-                      {fmt(t.amount)}
-                    </td>
-                    <td className="p-2">{t.paymentMode}</td>
-                    <td className="p-2">{t.status}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </motion.div>
   );
 }

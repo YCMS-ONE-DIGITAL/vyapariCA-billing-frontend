@@ -14,6 +14,7 @@ import BillingPage from "./pages/BillingPage";
 import InvoicePage from "./pages/InvoicePage";
 import ReportsPage from "./pages/ReportsPage";
 import ProductPage from "./pages/ProductPage";
+import PaymentPage from "./pages/PaymentPage";
 import SettingsPage from "./pages/SettingsPage";
 import MyBusiness from "./pages/MyBusiness";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
       { path: "invoices", element: <InvoicePage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "products", element: <ProductPage /> },
+      { path: "Payment", element: <PaymentPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "logout", element: <Logout /> },
       { path: "my-business", element: <MyBusiness /> },

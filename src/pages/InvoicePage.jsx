@@ -69,6 +69,8 @@ export default function InvoicePage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [toDeleteId, setToDeleteId] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [activeFilter, setActiveFilter] = useState("paid");
+
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -630,6 +632,26 @@ export default function InvoicePage() {
   return (
     <div className="p-5 bg-gray-50 min-h-screen">
       {/* Header */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* Paid Invoices Box */}
+        <div
+          onClick={() => setActiveFilter("paid")}
+          className={"bg-white p-6 rounded-xl shadow"}
+        >
+          <h2 className="text-lg font-bold text-blue-600">Paid Invoices</h2>
+          <p className="text-2xl font-bold">10</p>
+        </div>
+
+        {/* Unpaid Invoices Box */}
+        <div
+          onClick={() => setActiveFilter("unpaid")}
+          className={"bg-white p-6 rounded-xl shadow"}
+        >
+          <h2 className="text-lg font-bold text-blue-600">Unpaid Invoices</h2>
+          <p className="text-2xl font-bold">5</p>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Invoices</h1>
 
@@ -654,7 +676,7 @@ export default function InvoicePage() {
       <div className="w-full overflow-x-auto rounded-xl shadow bg-whitecd vyapari">
         <table className="min-w-[900px] w-full table-auto">
           <thead>
-            <tr>
+            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <th className="p-3 text-left">Sr</th>
               <th className="p-3 text-left">Invoice No</th>
               <th className="p-3 text-left">Date</th>
@@ -749,35 +771,7 @@ export default function InvoicePage() {
           </tbody>
         </table>
 
-        {/* Pagination */}
-        <div className="p-3 flex justify-between items-center bg-gray-50 border-t">
-          <span>
-            Showing {(page - 1) * pageSize + 1} –{" "}
-            {Math.min(page * pageSize, filtered.length)} of {filtered.length}
-          </span>
-
-          <div className="flex gap-2">
-            <button
-              onClick={goPrev}
-              disabled={page === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <span className="px-3 py-1 border rounded">
-              Page {page} / {totalPages}
-            </span>
-
-            <button
-              onClick={goNext}
-              disabled={page === totalPages}
-              className="px-3 py-1 border rounded disabled:opacity-50"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      
       </div>
 
       {/* ADD/EDIT MODAL */}

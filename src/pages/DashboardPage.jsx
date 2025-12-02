@@ -38,7 +38,7 @@ const DashboardPage = () => {
 
         {/* CLICK CARD */}
         <div
-          className="bg-white p-6 rounded-xl shadow cursor-pointer hover:shadow-lg transition"
+          className="bg-white p-6 rounded-xl shadow"
           onClick={() => setShowInvoiceDetails(!showInvoiceDetails)}
         >
           <h3 className="text-lg font-bold text-green-600">Total Invoices</h3>
@@ -51,29 +51,7 @@ const DashboardPage = () => {
         </div>
       </motion.div>
 
-      {/* ==== Popup Cards (Paid & Unpaid) ==== */}
-      {showInvoiceDetails && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="absolute top-28 right-10 bg-white p-5 rounded-xl shadow-xl w-[260px]"
-        >
-          <h3 className="text-lg font-bold text-gray-700 mb-3">
-            Invoice Breakdown
-          </h3>
-
-          <div className="bg-green-50 border-l-4 border-green-600 p-3 rounded mb-3">
-            <p className="font-semibold text-green-700">Paid Invoices</p>
-            <p className="text-xl font-bold">120</p>
-          </div>
-
-          <div className="bg-red-50 border-l-4 border-red-600 p-3 rounded">
-            <p className="font-semibold text-red-700">Unpaid Invoices</p>
-            <p className="text-xl font-bold">25</p>
-          </div>
-        </motion.div>
-      )}
+      
 
       {/* Chart */}
       <motion.div
