@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Printer, Trash2, Eye } from "lucide-react";
 
+
 const SAMPLE_INVOICES = [
   {
     id: 1,
@@ -133,6 +134,7 @@ export default function BillingPage() {
   };
 
   return (
+    
     <div className="p-4 sm:p-6 text-gray-900">
       <h1 className="text-xl sm:text-2xl font-semibold mb-4">Billing</h1>
 

@@ -11,6 +11,8 @@ import {
   Smartphone,
   Download,
   FileText,
+  FileDown,
+  Share2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import html2canvas from "html2canvas";
@@ -70,7 +72,6 @@ export default function InvoicePage() {
   const [toDeleteId, setToDeleteId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [activeFilter, setActiveFilter] = useState("paid");
-
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -382,6 +383,42 @@ export default function InvoicePage() {
     return wrapper;
   }
 
+  // --------------------
+  // New: Download Invoice as PDF
+  // --------------------
+  async function downloadInvoice(inv) {
+    try {
+      const html = buildInvoiceHtmlString(inv, { pos: false });
+      const node = createTempInvoiceNode(html);
+
+      const canvas = await html2canvas(node, { scale: 2 });
+      node.remove();
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pageWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      let y = 0;
+      pdf.addImage(imgData, "PNG", 0, y, imgWidth, imgHeight);
+
+      const pdfBlob = pdf.output("blob");
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${inv.invoiceNo || "invoice"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("downloadInvoice error:", err);
+      alert("Unable to download PDF on this device.");
+    }
+  }
+
   // Share as plain WhatsApp text using wa.me
   function shareAsText(inv) {
     const subtotal = calcSubtotal(inv.items || []);
@@ -677,7 +714,7 @@ export default function InvoicePage() {
         <table className="min-w-[900px] w-full table-auto">
           <thead>
             <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <th className="p-3 text-left">Sr</th>
+              <th className="p-3 text-left">Sr.No</th>
               <th className="p-3 text-left">Invoice No</th>
               <th className="p-3 text-left">Date</th>
               <th className="p-3 text-left">Customer</th>
@@ -738,22 +775,22 @@ export default function InvoicePage() {
                         <Printer className="w-4 h-4" />
                       </button>
 
-                      {/* Share as Image */}
+                      {/* Download PDF (NEW) */}
                       <button
-                        onClick={() => shareAsImage(inv)}
-                        className="text-indigo-600"
-                        title="Share as Image"
+                        onClick={() => downloadInvoice(inv)}
+                        className="text-blue-600"
+                        title="Download Invoice PDF"
                       >
-                        <Download className="w-4 h-4" />
+                        <FileDown className="w-4 h-4" />
                       </button>
 
-                      {/* Share as PDF */}
+                      {/* Share as PDF (icon changed to Share2) */}
                       <button
                         onClick={() => shareAsPDF(inv)}
                         className="text-indigo-800"
                         title="Share as PDF"
                       >
-                        <FileText className="w-4 h-4" />
+                        <Share2 className="w-4 h-4" />
                       </button>
 
                       <button
@@ -770,8 +807,6 @@ export default function InvoicePage() {
             )}
           </tbody>
         </table>
-
-      
       </div>
 
       {/* ADD/EDIT MODAL */}
@@ -810,12 +845,12 @@ export default function InvoicePage() {
                   }
                   required
                 />
-                <input
+                {/* <input
                   type="date"
                   className="border p-2 rounded"
                   value={form.dueDate}
                   onChange={(e) => updateFormField("dueDate", e.target.value)}
-                />
+                /> */}
               </div>
 
               {/* Row 2 */}

@@ -53,6 +53,24 @@ const Sidebar = ({ onClose }) => {
               onClose={onClose}
             />
             <SidebarItem
+              to="/app/B2CBilling"
+              icon={<FileText size={18} />}
+              label="B2CBilling"
+              onClose={onClose}
+            />
+            <SidebarItem
+              to="/app/B2BBilling"
+              icon={<FileText size={18} />}
+              label="B2BBilling"
+              onClose={onClose}
+            />
+            <SidebarItem
+              to="/app/payment"
+              icon={<IndianRupee size={18} />}
+              label="Payment"
+              onClose={onClose}
+            />
+            <SidebarItem
               to="/app/invoices"
               icon={<FileText size={18} />}
               label="Invoices"
@@ -64,12 +82,7 @@ const Sidebar = ({ onClose }) => {
               label="Products"
               onClose={onClose}
             />
-            <SidebarItem
-              to="/app/payment"
-              icon={<IndianRupee size={18} />}
-              label="Payment"
-              onClose={onClose}
-            />
+
             <SidebarItem
               to="/app/reports"
               icon={<BarChart2 size={18} />}

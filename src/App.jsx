@@ -11,14 +11,17 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
 import BillingPage from "./pages/BillingPage";
+import B2CBilling from "./pages/B2CBilling";
+import B2BBilling from "./pages/B2BBilling";
+import PaymentPage from "./pages/PaymentPage";
 import InvoicePage from "./pages/InvoicePage";
 import ReportsPage from "./pages/ReportsPage";
 import ProductPage from "./pages/ProductPage";
-import PaymentPage from "./pages/PaymentPage";
 import SettingsPage from "./pages/SettingsPage";
 import MyBusiness from "./pages/MyBusiness";
 import ForgotPassword from "./pages/ForgotPassword";
 import Logout from "./pages/Logout";
+
 
 // Layout
 import Layout from "./components/Layout";
@@ -38,6 +41,8 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <DashboardPage /> },
       { path: "clients", element: <ClientsPage /> },
       { path: "billing", element: <BillingPage /> },
+      { path: "B2CBilling", element: <B2CBilling /> },
+      { path: "B2BBilling", element: <B2BBilling /> },
       { path: "invoices", element: <InvoicePage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "products", element: <ProductPage /> },
