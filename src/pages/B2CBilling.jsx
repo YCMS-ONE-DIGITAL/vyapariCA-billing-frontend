@@ -1,6 +1,14 @@
 // B2CBillingPage.jsx
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Edit, Printer, X } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Printer,
+  X,
+  FileJson,
+  FileSpreadsheet,
+} from "lucide-react";
 
 export default function B2CBillingPage() {
   // ---------------- STATE ----------------
@@ -20,10 +28,20 @@ export default function B2CBillingPage() {
     items: [{ name: "", qty: 1, price: 0 }],
   });
 
-  // ---------------- EFFECT ----------------
+  // persist
   useEffect(() => {
     localStorage.setItem("b2c_invoices", JSON.stringify(invoiceList));
   }, [invoiceList]);
+
+  // ---------------- HELPERS / CALCS ----------------
+  const calcRowTotal = (it) => {
+    const qty = Number(it.qty || 0);
+    const price = Number(it.price || 0);
+    return qty * price;
+  };
+
+  const calcTotal = () =>
+    form.items.reduce((sum, i) => sum + calcRowTotal(i), 0);
 
   // ---------------- HANDLERS ----------------
   const openModal = (invoice = null) => {
@@ -46,10 +64,10 @@ export default function B2CBillingPage() {
   const closeModal = () => setModalOpen(false);
 
   const addItem = () => {
-    setForm({
-      ...form,
-      items: [...form.items, { name: "", qty: 1, price: 0 }],
-    });
+    setForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { name: "", qty: 1, price: 0 }],
+    }));
   };
 
   const removeItem = (index) => {
@@ -60,12 +78,13 @@ export default function B2CBillingPage() {
 
   const updateItem = (index, key, value) => {
     const copy = [...form.items];
-    copy[index][key] = value;
+    if (key === "qty" || key === "price") {
+      // allow empty string to enable clearing the field while typing
+      copy[index][key] = value === "" ? "" : Number(value);
+    } else {
+      copy[index][key] = value;
+    }
     setForm({ ...form, items: copy });
-  };
-
-  const calcTotal = () => {
-    return form.items.reduce((sum, i) => sum + i.qty * i.price, 0);
   };
 
   const saveInvoice = () => {
@@ -74,14 +93,30 @@ export default function B2CBillingPage() {
       return;
     }
 
+    // ensure at least one valid item with name and qty>0
+    const validItems = form.items.filter((it) => it.name && Number(it.qty) > 0);
+    if (validItems.length === 0) {
+      alert("Please add at least one item with a name and quantity > 0.");
+      return;
+    }
+
+    const invoiceData = {
+      ...form,
+      totals: {
+        total: calcTotal(),
+      },
+    };
+
     if (editingInvoice) {
-      setInvoiceList(
-        invoiceList.map((inv) =>
-          inv.id === editingInvoice ? { ...form, id: editingInvoice } : inv
+      setInvoiceList((prev) =>
+        prev.map((inv) =>
+          inv.id === editingInvoice
+            ? { ...invoiceData, id: editingInvoice }
+            : inv
         )
       );
     } else {
-      setInvoiceList([...invoiceList, { ...form, id: Date.now() }]);
+      setInvoiceList((prev) => [{ ...invoiceData, id: Date.now() }, ...prev]);
     }
 
     closeModal();
@@ -89,50 +124,98 @@ export default function B2CBillingPage() {
 
   const deleteInvoice = (id) => {
     if (window.confirm("Are you sure you want to delete this invoice?")) {
-      setInvoiceList(invoiceList.filter((inv) => inv.id !== id));
+      setInvoiceList((prev) => prev.filter((inv) => inv.id !== id));
     }
+  };
+
+  // ---------------- EXPORT / PRINT ----------------
+  const downloadJSON = (inv) => {
+    const blob = new Blob([JSON.stringify(inv, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice-${inv.invoiceNo}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadExcel = (inv) => {
+    let csv = "Item,Qty,Price,Total\n";
+    inv.items.forEach((i) => {
+      csv += `"${i.name}",${i.qty},${i.price},${(
+        Number(i.qty || 0) * Number(i.price || 0)
+      ).toFixed(2)}\n`;
+    });
+    csv += `\nTotal,,,"${
+      (inv.totals && inv.totals.total) ||
+      inv.items.reduce(
+        (s, it) => s + Number(it.qty || 0) * Number(it.price || 0),
+        0
+      )
+    }"`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice-${inv.invoiceNo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handlePrint = (inv) => {
     const itemsHtml = (inv.items || [])
-      .map(
-        (it, idx) => `
-      <tr>
-        <td>${idx + 1}</td>
-        <td>${it.name}</td>
-        <td>${it.qty}</td>
-        <td>${it.price}</td>
-        <td>${it.qty * it.price}</td>
-      </tr>`
-      )
+      .map((it, idx) => {
+        const total = (Number(it.qty || 0) * Number(it.price || 0)).toFixed(2);
+        return `<tr>
+          <td style="padding:6px;border:1px solid #000;text-align:center">${
+            idx + 1
+          }</td>
+          <td style="padding:6px;border:1px solid #000;text-align:left">${
+            it.name
+          }</td>
+          <td style="padding:6px;border:1px solid #000;text-align:center">${
+            it.qty
+          }</td>
+          <td style="padding:6px;border:1px solid #000;text-align:right">${
+            it.price
+          }</td>
+          <td style="padding:6px;border:1px solid #000;text-align:right">${total}</td>
+        </tr>`;
+      })
       .join("");
 
-    const subtotal = inv.items.reduce((sum, i) => sum + i.qty * i.price, 0);
+    const subtotal = (inv.items || [])
+      .reduce((s, it) => s + Number(it.qty || 0) * Number(it.price || 0), 0)
+      .toFixed(2);
 
     const html = `
       <html>
         <head>
           <style>
-            body { font-family: Arial; margin:0; padding:0;}
-            table { width:100%; border-collapse: collapse; }
-            th, td { border: 1px solid #000; padding: 6px; text-align:center; }
+            body { font-family: Arial; margin: 20px; }
+            table { width:100%; border-collapse: collapse; margin-top:10px; }
+            th, td { border:1px solid #000; padding:6px; }
+            th { background:#f0f0f0; }
           </style>
         </head>
         <body>
           <h2 style="text-align:center">Vyapari CA - B2C Invoice</h2>
-          <p><strong>Invoice:</strong> ${inv.invoiceNo}</p>
-          <p><strong>Date:</strong> ${inv.date}</p>
-          <p><strong>Customer:</strong> ${inv.customerName} (${inv.customerMobile})</p>
+          <p><strong>Invoice:</strong> ${
+            inv.invoiceNo
+          } &nbsp;&nbsp; <strong>Date:</strong> ${inv.date}</p>
+          <p><strong>Customer:</strong> ${inv.customerName} ${
+      inv.customerMobile ? `(${inv.customerMobile})` : ""
+    }</p>
           <table>
             <thead>
-              <tr>
-                <th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th>
-              </tr>
+              <tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
             </thead>
             <tbody>${itemsHtml}</tbody>
           </table>
-          <h3>Total: ₹${subtotal}</h3>
-          <script>window.onload = () => window.print();</script>
+          <h3 style="text-align:right">Total: ₹${subtotal}</h3>
+          <script>window.onload = ()=>window.print()</script>
         </body>
       </html>
     `;
@@ -146,18 +229,17 @@ export default function B2CBillingPage() {
   return (
     <div className="p-6 text-gray-900">
       <div className="flex items-center justify-between mb-4">
-      <h1 className="text-2xl font-semibold mb-6">B2C Billing</h1>
+        <h1 className="text-2xl font-semibold mb-6">B2C Billing</h1>
 
-      {/* Add Invoice Button */}
-      <button
-        onClick={() => openModal()}
-        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
-      >
-        <Plus size={16} /> Add B2C Invoice
-      </button>
+        <button
+          onClick={() => openModal()}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
+        >
+          <Plus size={16} /> Add B2C Invoice
+        </button>
       </div>
 
-      {/* ---------------- TABLE ---------------- */}
+      {/* TABLE */}
       <div className="overflow-x-auto bg-white rounded-xl shadow-xl border border-gray-200">
         <table className="w-full min-w-[900px]">
           <thead>
@@ -181,26 +263,52 @@ export default function B2CBillingPage() {
                   <td className="p-3">{inv.customerName}</td>
                   <td className="p-3 text-center font-semibold">
                     ₹
-                    {inv.items
-                      .reduce((sum, i) => sum + i.qty * i.price, 0)
+                    {(inv.items || [])
+                      .reduce(
+                        (s, it) =>
+                          s + Number(it.qty || 0) * Number(it.price || 0),
+                        0
+                      )
                       .toFixed(2)}
                   </td>
-                  <td className="p-3 text-center flex justify-center gap-3">
+
+                  <td className="p-3 text-center flex justify-center gap-4">
+                    <button
+                      className="text-yellow-600 hover:text-yellow-800"
+                      onClick={() => downloadJSON(inv)}
+                      title="Export JSON"
+                    >
+                      <FileJson size={18} />
+                    </button>
+
                     <button
                       className="text-green-600 hover:text-green-800"
+                      onClick={() => downloadExcel(inv)}
+                      title="Export Excel"
+                    >
+                      <FileSpreadsheet size={18} />
+                    </button>
+
+                    <button
+                      className="text-black hover:text-gray-700"
                       onClick={() => handlePrint(inv)}
+                      title="Print"
                     >
                       <Printer size={18} />
                     </button>
+
                     <button
                       className="text-blue-600 hover:text-blue-800"
                       onClick={() => openModal(inv)}
+                      title="Edit"
                     >
                       <Edit size={18} />
                     </button>
+
                     <button
                       className="text-red-600 hover:text-red-800"
                       onClick={() => deleteInvoice(inv.id)}
+                      title="Delete"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -218,112 +326,221 @@ export default function B2CBillingPage() {
         </table>
       </div>
 
-      {/* ---------------- MODAL ---------------- */}
+      {/* MODAL - FULL SCREEN CENTERED */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white w-full max-w-2xl rounded-lg p-6 shadow-lg relative">
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-semibold mb-4">
-              {editingInvoice ? "Edit Invoice" : "Add Invoice"}
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                placeholder="Invoice No"
-                className="border p-3 rounded-lg w-full"
-                value={form.invoiceNo}
-                onChange={(e) =>
-                  setForm({ ...form, invoiceNo: e.target.value })
-                }
-              />
-              <input
-                type="date"
-                className="border p-3 rounded-lg w-full"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-              <input
-                type="text"
-                placeholder="Customer Name"
-                className="border p-3 rounded-lg w-full"
-                value={form.customerName}
-                onChange={(e) =>
-                  setForm({ ...form, customerName: e.target.value })
-                }
-              />
-              <input
-                type="text"
-                placeholder="Customer Mobile"
-                className="border p-3 rounded-lg w-full"
-                value={form.customerMobile}
-                onChange={(e) =>
-                  setForm({ ...form, customerMobile: e.target.value })
-                }
-              />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white w-full max-w-[1100px] h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="text-xl font-semibold">
+                {editingInvoice ? "Edit Invoice" : "Create B2C Invoice"}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <X size={24} />
+              </button>
             </div>
 
-            <h3 className="text-lg font-semibold mb-2">Items</h3>
-            {form.items.map((it, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-12 gap-3 mb-3 items-center"
-              >
-                <input
-                  type="text"
-                  placeholder="Item Name"
-                  className="col-span-5 border p-2 rounded-lg"
-                  value={it.name}
-                  onChange={(e) => updateItem(i, "name", e.target.value)}
-                />
-                <input
-                  type="number"
-                  min="1"
-                  className="col-span-2 border p-2 rounded-lg"
-                  value={it.qty}
-                  onChange={(e) => updateItem(i, "qty", Number(e.target.value))}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  className="col-span-3 border p-2 rounded-lg"
-                  value={it.price}
-                  onChange={(e) =>
-                    updateItem(i, "price", Number(e.target.value))
-                  }
-                />
-                <button
-                  className="col-span-2 text-red-600"
-                  onClick={() => removeItem(i)}
-                >
-                  <Trash2 />
-                </button>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Section: Invoice / Customer (border box) */}
+              <div className="border rounded-lg p-4 mb-6 bg-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Invoice No *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Invoice No"
+                      value={form.invoiceNo}
+                      onChange={(e) =>
+                        setForm({ ...form, invoiceNo: e.target.value })
+                      }
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={form.date}
+                      onChange={(e) =>
+                        setForm({ ...form, date: e.target.value })
+                      }
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Customer Name"
+                      value={form.customerName}
+                      onChange={(e) =>
+                        setForm({ ...form, customerName: e.target.value })
+                      }
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Mobile
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Customer Mobile"
+                      value={form.customerMobile}
+                      onChange={(e) =>
+                        setForm({ ...form, customerMobile: e.target.value })
+                      }
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
               </div>
-            ))}
 
-            <button
-              onClick={addItem}
-              className="flex items-center gap-2 mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg"
-            >
-              <Plus size={18} /> Add Item
-            </button>
+              {/* Section: Items (border box) */}
+              <div className="border rounded-lg p-4 mb-6 bg-white">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold">Items</h3>
+                  <button
+                    onClick={addItem}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded"
+                  >
+                    <Plus size={14} /> Add Item
+                  </button>
+                </div>
 
-            <h3 className="text-xl font-semibold mt-4">
-              Total: ₹{calcTotal()}
-            </h3>
+                {/* POS-style item rows */}
+                <div className="space-y-3">
+                  {form.items.map((it, idx) => {
+                    const rowTotal = calcRowTotal(it);
+                    return (
+                      <div
+                        key={idx}
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 rounded border"
+                      >
+                        {/* Item name (flex-grow) */}
+                        <input
+                          type="text"
+                          placeholder="Item name"
+                          value={it.name}
+                          onChange={(e) =>
+                            updateItem(idx, "name", e.target.value)
+                          }
+                          className="flex-1 border rounded px-3 py-2"
+                        />
 
-            <button
-              onClick={saveInvoice}
-              className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg text-lg"
-            >
-              {editingInvoice ? "Update Invoice" : "Save Invoice"}
-            </button>
+                        {/* Qty */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-gray-600 hidden sm:block">
+                            Qty
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={it.qty}
+                            onChange={(e) =>
+                              updateItem(
+                                idx,
+                                "qty",
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value)
+                              )
+                            }
+                            className="w-20 border rounded px-2 py-2 text-right"
+                          />
+                        </div>
+
+                        {/* Price */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-gray-600 hidden sm:block">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={it.price}
+                            onChange={(e) =>
+                              updateItem(
+                                idx,
+                                "price",
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value)
+                              )
+                            }
+                            className="w-28 border rounded px-2 py-2 text-right"
+                          />
+                        </div>
+
+                        {/* Row total (display only) */}
+                        <div className="flex items-center gap-2 ml-auto">
+                          <div className="text-sm text-gray-600 hidden sm:block">
+                            Total
+                          </div>
+                          <div className="font-medium">
+                            ₹{rowTotal.toFixed(2)}
+                          </div>
+
+                          {/* Delete */}
+                          <button
+                            onClick={() => removeItem(idx)}
+                            className="text-red-600 hover:text-red-800 ml-2"
+                            title="Remove"
+                          >
+                            <Trash2 />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section: Totals (border box) */}
+              <div className="border rounded-lg p-4 mb-6 bg-white">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <h4 className="text-lg font-semibold">Total</h4>
+                    <p className="text-sm text-gray-600">
+                      Auto calculated from items
+                    </p>
+                  </div>
+
+                  <div className="text-2xl font-bold">
+                    ₹{calcTotal().toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer buttons */}
+            <div className="px-6 py-4 border-t bg-white flex items-center justify-end gap-3">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 bg-gray-200 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveInvoice}
+                className="px-6 py-2 bg-green-600 text-white rounded"
+              >
+                {editingInvoice ? "Update Invoice" : "Save Invoice"}
+              </button>
+            </div>
           </div>
         </div>
       )}

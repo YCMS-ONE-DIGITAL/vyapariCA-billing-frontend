@@ -1,16 +1,19 @@
 // B2BBilling.jsx
 import React, { useState, useEffect } from "react";
-import { Plus, X, Eye, Trash2 } from "lucide-react";
+import {
+  Plus,
+  X,
+  Eye,
+  Trash2,
+  Edit,
+  FileJson,
+  FileSpreadsheet,
+  Printer,
+} from "lucide-react";
 
 /**
- * Professional B2B Billing Page (Option B)
- *
- * - Modal for creating invoice (buyer details + items)
- * - GST calculation:
- *    - transactionType: "intra" => CGST + SGST (each = gst%/2)
- *    - transactionType: "inter" => IGST (full gst%)
- * - Saves invoices to localStorage key: "b2b_invoices"
- * - View Invoice modal with breakdown
+ * B2B Billing Page — Full Screen Modals (Option B)
+ * Added: JSON & Excel export icons (before Eye) + download handlers
  */
 
 export default function B2BBilling() {
@@ -21,6 +24,7 @@ export default function B2BBilling() {
 
   const [showModal, setShowModal] = useState(false);
   const [viewInvoice, setViewInvoice] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -51,18 +55,26 @@ export default function B2BBilling() {
 
   const updateItem = (idx, key, value) => {
     const copy = [...items];
-    copy[idx][key] = value;
+    // ensure numeric conversions where necessary
+    if (key === "qty" || key === "rate" || key === "gst") {
+      copy[idx][key] = value === "" ? "" : Number(value);
+    } else {
+      copy[idx][key] = value;
+    }
     setItems(copy);
   };
 
   // Calculations (per invoice)
-  const calcItemTaxable = (it) => Number(it.qty || 0) * Number(it.rate || 0);
+  const calcItemTaxable = (it) => {
+    const qty = Number(it.qty || 0);
+    const rate = Number(it.rate || 0);
+    return qty * rate;
+  };
 
   const calcItemGSTAmount = (it, transactionType) => {
     const taxable = calcItemTaxable(it);
     const gstRate = Number(it.gst || 0);
     const gstAmount = (taxable * gstRate) / 100;
-    // if intra -> split into CGST/SGST, else IGST
     if (transactionType === "intra") {
       return {
         cgst: gstAmount / 2,
@@ -101,7 +113,43 @@ export default function B2BBilling() {
     return { subtotal, totalGst, totalCgst, totalSgst, totalIgst, grandTotal };
   };
 
-  // Submit
+  const formatCurrency = (n) => `₹${Number(n || 0).toFixed(2)}`;
+
+  // Create / Edit modal opener
+  const openModal = (invoice = null) => {
+    if (invoice) {
+      // Edit mode
+      setForm({
+        invoiceNo: invoice.invoiceNo || "",
+        date: invoice.date || "",
+        businessName: invoice.businessName || "",
+        gstNumber: invoice.gstNumber || "",
+        billingAddress: invoice.billingAddress || "",
+        transactionType: invoice.transactionType || "intra",
+      });
+      setItems(
+        invoice.items && invoice.items.length
+          ? invoice.items
+          : [{ name: "", hsn: "", qty: 1, rate: 0, gst: 18 }]
+      );
+      setEditingId(invoice.id);
+    } else {
+      // New
+      setForm({
+        invoiceNo: "",
+        date: "",
+        businessName: "",
+        gstNumber: "",
+        billingAddress: "",
+        transactionType: "intra",
+      });
+      setItems([{ name: "", hsn: "", qty: 1, rate: 0, gst: 18 }]);
+      setEditingId(null);
+    }
+    setShowModal(true);
+  };
+
+  // Submit (create/update)
   const submitInvoice = () => {
     // basic validation
     if (
@@ -114,25 +162,31 @@ export default function B2BBilling() {
       return;
     }
 
-    // ensure at least one valid item
-    const validItems = items.filter((it) => it.name && it.qty > 0);
+    const validItems = items.filter((it) => it.name && Number(it.qty) > 0);
     if (validItems.length === 0) {
-      alert("Please add at least one item with a name.");
+      alert("Please add at least one item with a name and qty > 0.");
       return;
     }
 
     const totals = calcInvoiceTotals(items, form.transactionType);
 
-    const newInvoice = {
-      id: Date.now(),
-      ...form,
-      items,
-      totals,
-    };
+    if (editingId) {
+      setInvoiceList((prev) =>
+        prev.map((inv) =>
+          inv.id === editingId ? { ...inv, ...form, items, totals } : inv
+        )
+      );
+    } else {
+      const newInvoice = {
+        id: Date.now(),
+        ...form,
+        items,
+        totals,
+      };
+      setInvoiceList([newInvoice, ...invoiceList]);
+    }
 
-    setInvoiceList([newInvoice, ...invoiceList]);
-
-    // reset form
+    // reset
     setForm({
       invoiceNo: "",
       date: "",
@@ -142,14 +196,119 @@ export default function B2BBilling() {
       transactionType: "intra",
     });
     setItems([{ name: "", hsn: "", qty: 1, rate: 0, gst: 18 }]);
+    setEditingId(null);
     setShowModal(false);
   };
-
-  const formatCurrency = (n) => `₹${Number(n || 0).toFixed(2)}`;
 
   // Delete invoice
   const deleteInvoice = (id) =>
     setInvoiceList((prev) => prev.filter((i) => i.id !== id));
+
+  // ---------------- EXPORT JSON ----------------
+  const downloadJSON = (invoice) => {
+    const blob = new Blob([JSON.stringify(invoice, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice-${invoice.invoiceNo}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ---------------- EXPORT EXCEL (CSV) ----------------
+  const downloadExcel = (invoice) => {
+    // build CSV: header info + items table + totals
+    let csv = `Invoice No,${invoice.invoiceNo}\n`;
+    csv += `Date,${invoice.date}\n`;
+    csv += `Buyer,${invoice.businessName}\n`;
+    csv += `GSTIN,${invoice.gstNumber}\n`;
+    csv += `Transaction Type,${invoice.transactionType}\n\n`;
+
+    csv += "Sr.No,Item Name,HSN,Qty,Rate,Taxable,GST%,GST Amt\n";
+    invoice.items.forEach((it, i) => {
+      const taxable = (Number(it.qty || 0) * Number(it.rate || 0)).toFixed(2);
+      const gstAmt = ((taxable * Number(it.gst || 0)) / 100).toFixed(2);
+      csv += `${i + 1},"${it.name || ""}",${it.hsn || ""},${it.qty || 0},${
+        it.rate || 0
+      },${taxable},${it.gst || 0},${gstAmt}\n`;
+    });
+
+    const totals =
+      invoice.totals ||
+      calcInvoiceTotals(
+        invoice.items || [],
+        invoice.transactionType || "intra"
+      );
+    csv += `\nSubtotal,,,\n, , , , ,${totals.subtotal.toFixed(2)}\n`;
+    csv += `Total GST,,,\n, , , , ,${totals.totalGst.toFixed(2)}\n`;
+    csv += `Grand Total,,,\n, , , , ,${totals.grandTotal.toFixed(2)}\n`;
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice-${invoice.invoiceNo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ---------------- PRINT ----------------
+  const handlePrint = (inv) => {
+    const itemsHtml = (inv.items || [])
+      .map(
+        (it, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${it.name}</td>
+        <td>${it.hsn || "-"}</td>
+        <td>${it.qty}</td>
+        <td>${it.rate}</td>
+        <td>${(it.qty * it.rate).toFixed(2)}</td>
+      </tr>`
+      )
+      .join("");
+
+    const t =
+      inv.totals ||
+      calcInvoiceTotals(inv.items || [], inv.transactionType || "intra");
+
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial; margin:0; padding:20px;}
+            table { width:100%; border-collapse: collapse; margin-top:10px; }
+            th, td { border: 1px solid #000; padding: 6px; text-align:center; }
+            .left { text-align:left; }
+          </style>
+        </head>
+        <body>
+          <h2 style="text-align:center">Vyapari CA - B2B Invoice</h2>
+          <p><strong>Invoice:</strong> ${inv.invoiceNo}</p>
+          <p><strong>Date:</strong> ${inv.date}</p>
+          <p><strong>Buyer:</strong> ${inv.businessName} (${inv.gstNumber})</p>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Item</th><th>HSN</th><th>Qty</th><th>Rate</th><th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <h3 style="text-align:right">Grand Total: ₹${t.grandTotal.toFixed(
+            2
+          )}</h3>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `;
+
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+  };
 
   return (
     <div className="p-6 text-gray-900">
@@ -157,7 +316,7 @@ export default function B2BBilling() {
         <h1 className="text-2xl font-semibold mb-6">B2B Billing</h1>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => openModal(null)}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
         >
           <Plus size={16} /> Add B2B Invoice
@@ -182,15 +341,10 @@ export default function B2BBilling() {
           </thead>
 
           <tbody>
-            {invoiceList.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center p-6 text-gray-500">
-                  No B2B invoices yet
-                </td>
-              </tr>
-            ) : (
-              invoiceList.map((inv) => (
-                <tr key={inv.id} className="border-b hover:bg-gray-50">
+            {invoiceList.length ? (
+              invoiceList.map((inv, idx) => (
+                <tr key={inv.id} className="border-t hover:bg-gray-100">
+                  <td className="p-3">{idx + 1}</td>
                   <td className="p-3">{inv.invoiceNo}</td>
                   <td className="p-3">{inv.date}</td>
                   <td className="p-3">{inv.businessName}</td>
@@ -206,6 +360,25 @@ export default function B2BBilling() {
                   </td>
 
                   <td className="p-3 text-center flex justify-center gap-3">
+                    {/* JSON Export */}
+                    <button
+                      onClick={() => downloadJSON(inv)}
+                      className="text-amber-600 hover:text-amber-800"
+                      title="Export JSON"
+                    >
+                      <FileJson size={18} />
+                    </button>
+
+                    {/* Excel/CSV Export */}
+                    <button
+                      onClick={() => downloadExcel(inv)}
+                      className="text-green-600 hover:text-green-800"
+                      title="Export Excel"
+                    >
+                      <FileSpreadsheet size={18} />
+                    </button>
+
+                    {/* View */}
                     <button
                       onClick={() => setViewInvoice(inv)}
                       className="text-blue-600 hover:text-blue-800"
@@ -214,6 +387,25 @@ export default function B2BBilling() {
                       <Eye size={18} />
                     </button>
 
+                    {/* Print */}
+                    <button
+                      onClick={() => handlePrint(inv)}
+                      className="text-black hover:text-gray-700"
+                      title="Print"
+                    >
+                      <Printer size={18} />
+                    </button>
+
+                    {/* Edit */}
+                    <button
+                      onClick={() => openModal(inv)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Edit"
+                    >
+                      <Edit size={18} />
+                    </button>
+
+                    {/* Delete */}
                     <button
                       onClick={() => {
                         if (confirm("Delete this invoice?"))
@@ -227,348 +419,453 @@ export default function B2BBilling() {
                   </td>
                 </tr>
               ))
+            ) : (
+              <tr>
+                <td colSpan={9} className="text-center p-6 text-gray-500">
+                  No invoices found
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* CREATE MODAL */}
+      {/* CREATE MODAL — FULL SCREEN (Option B: padded + rounded) */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6 relative">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-gray-700"
-            >
-              <X size={22} />
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white w-full max-w-[1100px] h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Top bar (sticky) */}
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-semibold">
+                {editingId ? "Edit B2B Invoice" : "Create B2B Invoice"}
+              </h2>
 
-            <h2 className="text-xl font-semibold mb-4">Create B2B Invoice</h2>
-
-            {/* Buyer details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                placeholder="Invoice No"
-                className="border p-3 rounded-lg"
-                value={form.invoiceNo}
-                onChange={(e) =>
-                  setForm({ ...form, invoiceNo: e.target.value })
-                }
-              />
-
-              <input
-                type="date"
-                className="border p-3 rounded-lg"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-
-              <input
-                type="text"
-                className="border p-3 rounded-lg col-span-2"
-                placeholder="Buyer Business Name"
-                value={form.businessName}
-                onChange={(e) =>
-                  setForm({ ...form, businessName: e.target.value })
-                }
-              />
-
-              <input
-                type="text"
-                placeholder="Buyer GST Number"
-                className="border p-3 rounded-lg"
-                value={form.gstNumber}
-                onChange={(e) =>
-                  setForm({ ...form, gstNumber: e.target.value })
-                }
-              />
-
-              <select
-                value={form.transactionType}
-                onChange={(e) =>
-                  setForm({ ...form, transactionType: e.target.value })
-                }
-                className="border p-3 rounded-lg"
-              >
-                <option value="intra">Intra-state (CGST + SGST)</option>
-                <option value="inter">Inter-state (IGST)</option>
-              </select>
-
-              <input
-                type="text"
-                placeholder="Billing Address"
-                className="border p-3 rounded-lg"
-                value={form.billingAddress}
-                onChange={(e) =>
-                  setForm({ ...form, billingAddress: e.target.value })
-                }
-              />
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingId(null);
+                  }}
+                  className="text-gray-700 hover:text-gray-900"
+                >
+                  <X size={26} />
+                </button>
+              </div>
             </div>
 
-            {/* Items */}
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2">Items</h3>
-
-              <div className="space-y-3">
-                {items.map((it, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-3 items-center">
-                    <input
-                      type="text"
-                      placeholder="Item Name"
-                      className="col-span-4 border p-2 rounded-lg"
-                      value={it.name}
-                      onChange={(e) => updateItem(i, "name", e.target.value)}
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="HSN"
-                      className="col-span-2 border p-2 rounded-lg"
-                      value={it.hsn}
-                      onChange={(e) => updateItem(i, "hsn", e.target.value)}
-                    />
-
-                    <input
-                      type="number"
-                      min="1"
-                      className="col-span-2 border p-2 rounded-lg"
-                      value={it.qty}
-                      onChange={(e) =>
-                        updateItem(i, "qty", Number(e.target.value))
-                      }
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      className="col-span-2 border p-2 rounded-lg"
-                      value={it.rate}
-                      onChange={(e) =>
-                        updateItem(i, "rate", Number(e.target.value))
-                      }
-                    />
-
-                    <select
-                      className="col-span-1 border p-2 rounded-lg"
-                      value={it.gst}
-                      onChange={(e) =>
-                        updateItem(i, "gst", Number(e.target.value))
-                      }
-                    >
-                      <option value={0}>0%</option>
-                      <option value={5}>5%</option>
-                      <option value={12}>12%</option>
-                      <option value={18}>18%</option>
-                      <option value={28}>28%</option>
-                    </select>
-
-                    <div className="col-span-1 text-center">
-                      <button
-                        className="text-red-600"
-                        onClick={() => removeItem(i)}
-                      >
-                        <Trash2 />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+              {/* Buyer details: 2-column grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Invoice No *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.invoiceNo}
+                    onChange={(e) =>
+                      setForm({ ...form, invoiceNo: e.target.value })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Invoice number"
+                  />
+                </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    className="w-full border p-2 rounded"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Buyer Business Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.businessName}
+                    onChange={(e) =>
+                      setForm({ ...form, businessName: e.target.value })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Buyer / Company name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    GST Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.gstNumber}
+                    onChange={(e) =>
+                      setForm({ ...form, gstNumber: e.target.value })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="GSTIN"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Transaction Type
+                  </label>
+                  <select
+                    value={form.transactionType}
+                    onChange={(e) =>
+                      setForm({ ...form, transactionType: e.target.value })
+                    }
+                    className="w-full border p-2 rounded"
+                  >
+                    <option value="intra">Intra-state (CGST + SGST)</option>
+                    <option value="inter">Inter-state (IGST)</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Billing Address
+                  </label>
+                  <textarea
+                    value={form.billingAddress}
+                    onChange={(e) =>
+                      setForm({ ...form, billingAddress: e.target.value })
+                    }
+                    className="w-full border p-2 rounded"
+                    rows={2}
+                    placeholder="Billing address"
+                  />
+                </div>
+              </div>
+
+              {/* Items table with inputs */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold">Items</h3>
                   <button
                     onClick={addItem}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded"
                   >
                     <Plus size={14} /> Add Item
                   </button>
                 </div>
+
+                <div className="overflow-x-auto bg-white border rounded">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="p-2 text-left">#</th>
+                        <th className="p-2 text-left">Item Name</th>
+                        <th className="p-2 text-left">HSN</th>
+                        <th className="p-2 text-right">Qty</th>
+                        <th className="p-2 text-right">Rate</th>
+                        <th className="p-2 text-right">GST %</th>
+                        <th className="p-2 text-right">Taxable</th>
+                        <th className="p-2 text-center">Remove</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {items.map((it, i) => {
+                        const taxable = calcItemTaxable(it);
+                        return (
+                          <tr key={i} className="border-b">
+                            <td className="p-2">{i + 1}</td>
+
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={it.name}
+                                onChange={(e) =>
+                                  updateItem(i, "name", e.target.value)
+                                }
+                                className="w-full border p-1 rounded"
+                                placeholder="Item name"
+                              />
+                            </td>
+
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={it.hsn}
+                                onChange={(e) =>
+                                  updateItem(i, "hsn", e.target.value)
+                                }
+                                className="w-full border p-1 rounded"
+                                placeholder="HSN"
+                              />
+                            </td>
+
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={it.qty}
+                                onChange={(e) =>
+                                  updateItem(i, "qty", e.target.value)
+                                }
+                                className="w-20 border p-1 rounded text-right"
+                              />
+                            </td>
+
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                min="0"
+                                value={it.rate}
+                                onChange={(e) =>
+                                  updateItem(i, "rate", e.target.value)
+                                }
+                                className="w-28 border p-1 rounded text-right"
+                              />
+                            </td>
+
+                            <td className="p-2">
+                              <select
+                                value={it.gst}
+                                onChange={(e) =>
+                                  updateItem(i, "gst", e.target.value)
+                                }
+                                className="w-20 border p-1 rounded"
+                              >
+                                <option value={0}>0</option>
+                                <option value={5}>5</option>
+                                <option value={12}>12</option>
+                                <option value={18}>18</option>
+                                <option value={28}>28</option>
+                              </select>
+                            </td>
+
+                            <td className="p-2 text-right font-medium">
+                              {formatCurrency(taxable)}
+                            </td>
+
+                            <td className="p-2 text-center">
+                              <button
+                                onClick={() => removeItem(i)}
+                                className="text-red-600"
+                                title="Remove"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totals preview aligned right */}
+              <div className="flex justify-end">
+                <div className="w-full md:w-1/3 bg-white border rounded p-4 shadow">
+                  <h4 className="font-semibold mb-2">Totals</h4>
+                  {(() => {
+                    const t = calcInvoiceTotals(items, form.transactionType);
+                    return (
+                      <div className="text-sm space-y-2">
+                        <div className="flex justify-between">
+                          <div>Subtotal</div>
+                          <div className="font-medium">
+                            {formatCurrency(t.subtotal)}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between">
+                          <div>Total GST</div>
+                          <div className="font-medium">
+                            {formatCurrency(t.totalGst)}
+                          </div>
+                        </div>
+
+                        {form.transactionType === "intra" ? (
+                          <>
+                            <div className="flex justify-between">
+                              <div>CGST</div>
+                              <div>{formatCurrency(t.totalCgst)}</div>
+                            </div>
+                            <div className="flex justify-between">
+                              <div>SGST</div>
+                              <div>{formatCurrency(t.totalSgst)}</div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex justify-between">
+                            <div>IGST</div>
+                            <div>{formatCurrency(t.totalIgst)}</div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between mt-2 border-t pt-2 font-semibold">
+                          <div>Grand Total</div>
+                          <div>{formatCurrency(t.grandTotal)}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
 
-            {/* Totals preview */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <h4 className="font-semibold mb-2">Preview Totals</h4>
-              {(() => {
-                const t = calcInvoiceTotals(items, form.transactionType);
-                return (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>Subtotal:</div>
-                    <div className="text-right">
-                      {formatCurrency(t.subtotal)}
-                    </div>
-
-                    <div>Total GST:</div>
-                    <div className="text-right">
-                      {formatCurrency(t.totalGst)}
-                    </div>
-
-                    {form.transactionType === "intra" ? (
-                      <>
-                        <div>CGST:</div>
-                        <div className="text-right">
-                          {formatCurrency(t.totalCgst)}
-                        </div>
-
-                        <div>SGST:</div>
-                        <div className="text-right">
-                          {formatCurrency(t.totalSgst)}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>IGST:</div>
-                        <div className="text-right">
-                          {formatCurrency(t.totalIgst)}
-                        </div>
-                      </>
-                    )}
-
-                    <div className="font-semibold">Grand Total:</div>
-                    <div className="text-right font-semibold">
-                      {formatCurrency(t.grandTotal)}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="flex gap-3 justify-end">
+            {/* Bottom fixed buttons */}
+            <div className="border-t p-4 bg-white flex justify-end gap-3 sticky bottom-0">
               <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-300 rounded"
+                onClick={() => {
+                  setShowModal(false);
+                  setEditingId(null);
+                }}
+                className="px-5 py-2 bg-gray-300 rounded-lg"
               >
                 Cancel
               </button>
 
               <button
                 onClick={submitInvoice}
-                className="px-4 py-2 bg-green-600 text-white rounded"
+                className="px-5 py-2 bg-green-600 text-white rounded-lg"
               >
-                Save Invoice
+                {editingId ? "Update Invoice" : "Save Invoice"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* VIEW INVOICE MODAL */}
+      {/* VIEW INVOICE — FULL SCREEN (Option B) */}
       {viewInvoice && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white w-full max-w-2xl rounded-lg shadow-lg p-6 relative">
-            <button
-              onClick={() => setViewInvoice(null)}
-              className="absolute top-4 right-4 text-gray-700"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-bold mb-2">B2B Invoice</h2>
-
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div>
-                <p>
-                  <strong>Invoice:</strong> {viewInvoice.invoiceNo}
-                </p>
-                <p>
-                  <strong>Date:</strong> {viewInvoice.date}
-                </p>
-                <p>
-                  <strong>Buyer:</strong> {viewInvoice.businessName}
-                </p>
-                <p>
-                  <strong>GSTIN:</strong> {viewInvoice.gstNumber}
-                </p>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Transaction:</strong>{" "}
-                  {viewInvoice.transactionType === "intra"
-                    ? "Intra-state"
-                    : "Inter-state"}
-                </p>
-                <p>
-                  <strong>Address:</strong> {viewInvoice.billingAddress || "-"}
-                </p>
-              </div>
-            </div>
-
-            <table className="w-full text-sm border">
-              <thead>
-                <tr className="bg-gray-100 border-b">
-                  <th className="p-2 text-left">Item</th>
-                  <th className="p-2 text-left">HSN</th>
-                  <th className="p-2 text-center">Qty</th>
-                  <th className="p-2 text-right">Rate</th>
-                  <th className="p-2 text-right">Taxable</th>
-                  <th className="p-2 text-right">GST%</th>
-                  <th className="p-2 text-right">GST Amt</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {viewInvoice.items.map((it, i) => {
-                  const taxable = it.qty * it.rate;
-                  const gstAmt = (taxable * it.gst) / 100;
-                  return (
-                    <tr key={i} className="border-b">
-                      <td className="p-2">{it.name}</td>
-                      <td className="p-2">{it.hsn || "-"}</td>
-                      <td className="p-2 text-center">{it.qty}</td>
-                      <td className="p-2 text-right">
-                        ₹{Number(it.rate).toFixed(2)}
-                      </td>
-                      <td className="p-2 text-right">₹{taxable.toFixed(2)}</td>
-                      <td className="p-2 text-right">{it.gst}%</td>
-                      <td className="p-2 text-right">₹{gstAmt.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div>Subtotal:</div>
-              <div className="text-right">
-                {formatCurrency(viewInvoice.totals.subtotal)}
-              </div>
-
-              <div>Total GST:</div>
-              <div className="text-right">
-                {formatCurrency(viewInvoice.totals.totalGst)}
-              </div>
-
-              {viewInvoice.transactionType === "intra" ? (
-                <>
-                  <div>CGST:</div>
-                  <div className="text-right">
-                    {formatCurrency(viewInvoice.totals.totalCgst)}
-                  </div>
-
-                  <div>SGST:</div>
-                  <div className="text-right">
-                    {formatCurrency(viewInvoice.totals.totalSgst)}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>IGST:</div>
-                  <div className="text-right">
-                    {formatCurrency(viewInvoice.totals.totalIgst)}
-                  </div>
-                </>
-              )}
-
-              <div className="font-semibold">Grand Total:</div>
-              <div className="text-right font-semibold">
-                {formatCurrency(viewInvoice.totals.grandTotal)}
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-stretch">
+          <div className="bg-white m-4 rounded-xl shadow-xl flex flex-col w-full max-h-[calc(100vh-32px)] overflow-hidden">
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold">Invoice Details</h2>
               <button
                 onClick={() => setViewInvoice(null)}
-                className="px-4 py-2 bg-gray-300 rounded"
+                className="text-gray-700 hover:text-gray-900"
+              >
+                <X size={26} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p>
+                    <strong>Invoice:</strong> {viewInvoice.invoiceNo}
+                  </p>
+                  <p>
+                    <strong>Date:</strong> {viewInvoice.date}
+                  </p>
+                  <p>
+                    <strong>Buyer:</strong> {viewInvoice.businessName}
+                  </p>
+                  <p>
+                    <strong>GSTIN:</strong> {viewInvoice.gstNumber}
+                  </p>
+                </div>
+
+                <div>
+                  <p>
+                    <strong>Transaction:</strong>{" "}
+                    {viewInvoice.transactionType === "intra"
+                      ? "Intra-state"
+                      : "Inter-state"}
+                  </p>
+                  <p>
+                    <strong>Address:</strong>{" "}
+                    {viewInvoice.billingAddress || "-"}
+                  </p>
+                </div>
+              </div>
+
+              <table className="w-full mt-4 text-sm border">
+                <thead>
+                  <tr className="bg-gray-100 border-b">
+                    <th className="p-2 text-left">Item</th>
+                    <th className="p-2 text-left">HSN</th>
+                    <th className="p-2 text-center">Qty</th>
+                    <th className="p-2 text-right">Rate</th>
+                    <th className="p-2 text-right">Taxable</th>
+                    <th className="p-2 text-right">GST</th>
+                    <th className="p-2 text-right">GST Amt</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {viewInvoice.items.map((it, i) => {
+                    const taxable = it.qty * it.rate;
+                    const gstAmt = (taxable * it.gst) / 100;
+                    return (
+                      <tr key={i} className="border-b">
+                        <td className="p-2">{it.name}</td>
+                        <td className="p-2">{it.hsn || "-"}</td>
+                        <td className="p-2 text-center">{it.qty}</td>
+                        <td className="p-2 text-right">
+                          ₹{Number(it.rate).toFixed(2)}
+                        </td>
+                        <td className="p-2 text-right">
+                          ₹{taxable.toFixed(2)}
+                        </td>
+                        <td className="p-2 text-right">{it.gst}%</td>
+                        <td className="p-2 text-right">₹{gstAmt.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              <div className="mt-6 grid grid-cols-2 gap-2 text-lg">
+                <div>Subtotal:</div>
+                <div className="text-right">
+                  {formatCurrency(viewInvoice.totals.subtotal)}
+                </div>
+
+                <div>Total GST:</div>
+                <div className="text-right">
+                  {formatCurrency(viewInvoice.totals.totalGst)}
+                </div>
+
+                {viewInvoice.transactionType === "intra" ? (
+                  <>
+                    <div>CGST:</div>
+                    <div className="text-right">
+                      {formatCurrency(viewInvoice.totals.totalCgst)}
+                    </div>
+
+                    <div>SGST:</div>
+                    <div className="text-right">
+                      {formatCurrency(viewInvoice.totals.totalSgst)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>IGST:</div>
+                    <div className="text-right">
+                      {formatCurrency(viewInvoice.totals.totalIgst)}
+                    </div>
+                  </>
+                )}
+
+                <div className="font-bold">Grand Total:</div>
+                <div className="text-right font-bold">
+                  {formatCurrency(viewInvoice.totals.grandTotal)}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t p-4 bg-white flex justify-end">
+              <button
+                onClick={() => setViewInvoice(null)}
+                className="px-5 py-2 bg-gray-300 rounded-lg"
               >
                 Close
               </button>
