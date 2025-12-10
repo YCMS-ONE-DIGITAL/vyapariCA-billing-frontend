@@ -14,6 +14,7 @@ import {
 /**
  * B2B Billing Page — Full Screen Modals (Option B)
  * Added: JSON & Excel export icons (before Eye) + download handlers
+ * Additional: Download ALL invoices as single JSON or single CSV (Excel) file
  */
 
 export default function B2BBilling() {
@@ -204,7 +205,7 @@ export default function B2BBilling() {
   const deleteInvoice = (id) =>
     setInvoiceList((prev) => prev.filter((i) => i.id !== id));
 
-  // ---------------- EXPORT JSON ----------------
+  // ---------------- EXPORT JSON (single invoice) ----------------
   const downloadJSON = (invoice) => {
     const blob = new Blob([JSON.stringify(invoice, null, 2)], {
       type: "application/json",
@@ -217,7 +218,7 @@ export default function B2BBilling() {
     URL.revokeObjectURL(url);
   };
 
-  // ---------------- EXPORT EXCEL (CSV) ----------------
+  // ---------------- EXPORT EXCEL (CSV) (single invoice) ----------------
   const downloadExcel = (invoice) => {
     // build CSV: header info + items table + totals
     let csv = `Invoice No,${invoice.invoiceNo}\n`;
@@ -254,7 +255,7 @@ export default function B2BBilling() {
     URL.revokeObjectURL(url);
   };
 
-  // ---------------- PRINT ----------------
+  // ---------------- PRINT (single invoice) ----------------
   const handlePrint = (inv) => {
     const itemsHtml = (inv.items || [])
       .map(
@@ -310,19 +311,112 @@ export default function B2BBilling() {
     win.document.close();
   };
 
+  // ---------------- EXPORT ALL INVOICES AS SINGLE JSON ----------------
+  const downloadAllJSON = () => {
+    if (!invoiceList || invoiceList.length === 0) {
+      alert("No invoices to download.");
+      return;
+    }
+    const blob = new Blob([JSON.stringify(invoiceList, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `All-Invoices.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ---------------- EXPORT ALL INVOICES AS SINGLE CSV ----------------
+  const downloadAllExcel = () => {
+    if (!invoiceList || invoiceList.length === 0) {
+      alert("No invoices to download.");
+      return;
+    }
+
+    // Build CSV with blocks per invoice
+    let csv = "";
+    invoiceList.forEach((invoice, idx) => {
+      csv += `Invoice No,${invoice.invoiceNo}\n`;
+      csv += `Date,${invoice.date}\n`;
+      csv += `Buyer,${invoice.businessName}\n`;
+      csv += `GSTIN,${invoice.gstNumber}\n`;
+      csv += `Transaction Type,${invoice.transactionType}\n\n`;
+      csv += "Sr.No,Item Name,HSN,Qty,Rate,Taxable,GST%,GST Amt\n";
+
+      invoice.items.forEach((it, i) => {
+        const taxable = (Number(it.qty || 0) * Number(it.rate || 0)).toFixed(2);
+        const gstAmt = ((taxable * Number(it.gst || 0)) / 100).toFixed(2);
+        // Escape double quotes in name
+        const safeName = String(it.name || "").replace(/"/g, '""');
+        csv += `${i + 1},"${safeName}",${it.hsn || ""},${it.qty || 0},${
+          it.rate || 0
+        },${taxable},${it.gst || 0},${gstAmt}\n`;
+      });
+
+      const totals =
+        invoice.totals ||
+        calcInvoiceTotals(
+          invoice.items || [],
+          invoice.transactionType || "intra"
+        );
+
+      csv += `\nSubtotal,,,,,${totals.subtotal.toFixed(2)}\n`;
+      csv += `Total GST,,,,,${totals.totalGst.toFixed(2)}\n`;
+      csv += `Grand Total,,,,,${totals.grandTotal.toFixed(2)}\n`;
+
+      // Add a blank line between invoices except after last
+      if (idx < invoiceList.length - 1) {
+        csv += `\n`;
+      }
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `All-Invoices.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6 text-gray-900">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold mb-6">B2B Billing</h1>
 
-        <button
-          onClick={() => openModal(null)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
-        >
-          <Plus size={16} /> Add B2B Invoice
-        </button>
+        <div className="flex items-center gap-3">
+          {/* ALL JSON Export (single file with all invoices) */}
+          <button
+            onClick={downloadAllJSON}
+            className="text-amber-600 hover:text-amber-800 p-2 rounded-md border border-amber-100 bg-white"
+            title="Download All Invoices (JSON)"
+          >
+            <FileJson size={18} />
+            <span>Download JSON</span>
+          </button>
+
+          {/* ALL Excel/CSV Export (single file with all invoices) */}
+          <button
+            onClick={downloadAllExcel}
+            className="text-amber-600 hover:text-green-800 p-2 rounded-md border border-green-100 bg-white"
+            title="Download All Invoices (CSV)"
+          >
+            <FileSpreadsheet size={18} />
+            <span>Download CSV</span>
+          </button>
+
+          <button
+            onClick={() => openModal(null)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
+          >
+            <Plus size={16} /> Add B2B Invoice
+          </button>
+        </div>
       </div>
 
+     
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-xl shadow-xl border border-gray-200">
         <table className="w-full min-w-[900px]">
@@ -360,7 +454,7 @@ export default function B2BBilling() {
                   </td>
 
                   <td className="p-3 text-center flex justify-center gap-3">
-                    {/* JSON Export */}
+                    {/* JSON Export (single invoice) */}
                     <button
                       onClick={() => downloadJSON(inv)}
                       className="text-amber-600 hover:text-amber-800"
@@ -369,7 +463,7 @@ export default function B2BBilling() {
                       <FileJson size={18} />
                     </button>
 
-                    {/* Excel/CSV Export */}
+                    {/* Excel/CSV Export (single invoice) */}
                     <button
                       onClick={() => downloadExcel(inv)}
                       className="text-green-600 hover:text-green-800"

@@ -78,12 +78,7 @@ export default function B2CBillingPage() {
 
   const updateItem = (index, key, value) => {
     const copy = [...form.items];
-    if (key === "qty" || key === "price") {
-      // allow empty string to enable clearing the field while typing
-      copy[index][key] = value === "" ? "" : Number(value);
-    } else {
-      copy[index][key] = value;
-    }
+    copy[index][key] = value === "" ? "" : Number(value);
     setForm({ ...form, items: copy });
   };
 
@@ -93,10 +88,10 @@ export default function B2CBillingPage() {
       return;
     }
 
-    // ensure at least one valid item with name and qty>0
+    // ensure at least one valid item
     const validItems = form.items.filter((it) => it.name && Number(it.qty) > 0);
     if (validItems.length === 0) {
-      alert("Please add at least one item with a name and quantity > 0.");
+      alert("Please add at least one item with a valid name & qty.");
       return;
     }
 
@@ -145,16 +140,12 @@ export default function B2CBillingPage() {
     let csv = "Item,Qty,Price,Total\n";
     inv.items.forEach((i) => {
       csv += `"${i.name}",${i.qty},${i.price},${(
-        Number(i.qty || 0) * Number(i.price || 0)
+        Number(i.qty) * Number(i.price)
       ).toFixed(2)}\n`;
     });
-    csv += `\nTotal,,,"${
-      (inv.totals && inv.totals.total) ||
-      inv.items.reduce(
-        (s, it) => s + Number(it.qty || 0) * Number(it.price || 0),
-        0
-      )
-    }"`;
+
+    csv += `\nTotal,,,${calcTotal()}`;
+
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -165,10 +156,10 @@ export default function B2CBillingPage() {
   };
 
   const handlePrint = (inv) => {
-    const itemsHtml = (inv.items || [])
-      .map((it, idx) => {
-        const total = (Number(it.qty || 0) * Number(it.price || 0)).toFixed(2);
-        return `<tr>
+    const itemsHtml = inv.items
+      .map(
+        (it, idx) => `
+        <tr>
           <td style="padding:6px;border:1px solid #000;text-align:center">${
             idx + 1
           }</td>
@@ -181,44 +172,44 @@ export default function B2CBillingPage() {
           <td style="padding:6px;border:1px solid #000;text-align:right">${
             it.price
           }</td>
-          <td style="padding:6px;border:1px solid #000;text-align:right">${total}</td>
-        </tr>`;
-      })
+          <td style="padding:6px;border:1px solid #000;text-align:right">${
+            it.qty * it.price
+          }</td>
+        </tr>`
+      )
       .join("");
 
-    const subtotal = (inv.items || [])
-      .reduce((s, it) => s + Number(it.qty || 0) * Number(it.price || 0), 0)
-      .toFixed(2);
+    const subtotal = calcTotal().toFixed(2);
 
     const html = `
       <html>
         <head>
           <style>
             body { font-family: Arial; margin: 20px; }
-            table { width:100%; border-collapse: collapse; margin-top:10px; }
+            table { width:100%; border-collapse: collapse; }
             th, td { border:1px solid #000; padding:6px; }
             th { background:#f0f0f0; }
           </style>
         </head>
         <body>
           <h2 style="text-align:center">Vyapari CA - B2C Invoice</h2>
-          <p><strong>Invoice:</strong> ${
-            inv.invoiceNo
-          } &nbsp;&nbsp; <strong>Date:</strong> ${inv.date}</p>
-          <p><strong>Customer:</strong> ${inv.customerName} ${
-      inv.customerMobile ? `(${inv.customerMobile})` : ""
-    }</p>
+          <p><strong>Invoice:</strong> ${inv.invoiceNo} | <strong>Date:</strong> ${inv.date}</p>
+          <p><strong>Customer:</strong> ${inv.customerName}</p>
+
           <table>
             <thead>
-              <tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+              <tr>
+                <th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th>
+              </tr>
             </thead>
             <tbody>${itemsHtml}</tbody>
           </table>
+
           <h3 style="text-align:right">Total: ₹${subtotal}</h3>
+
           <script>window.onload = ()=>window.print()</script>
         </body>
-      </html>
-    `;
+      </html>`;
 
     const win = window.open("", "_blank");
     win.document.write(html);
@@ -262,14 +253,7 @@ export default function B2CBillingPage() {
                   <td className="p-3">{inv.date}</td>
                   <td className="p-3">{inv.customerName}</td>
                   <td className="p-3 text-center font-semibold">
-                    ₹
-                    {(inv.items || [])
-                      .reduce(
-                        (s, it) =>
-                          s + Number(it.qty || 0) * Number(it.price || 0),
-                        0
-                      )
-                      .toFixed(2)}
+                    ₹{calcTotal().toFixed(2)}
                   </td>
 
                   <td className="p-3 text-center flex justify-center gap-4">
@@ -326,10 +310,16 @@ export default function B2CBillingPage() {
         </table>
       </div>
 
-      {/* MODAL - FULL SCREEN CENTERED */}
+      {/* MODAL WITH OUTSIDE CLICK CLOSE */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white w-full max-w-[1100px] h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={closeModal} // 👈 outside click closes modal
+        >
+          <div
+            className="bg-white w-full max-w-[1100px] h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()} // 👈 stop inside click
+          >
             {/* Top bar */}
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h2 className="text-xl font-semibold">
@@ -345,7 +335,7 @@ export default function B2CBillingPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Section: Invoice / Customer (border box) */}
+              {/* Section fields */}
               <div className="border rounded-lg p-4 mb-6 bg-white">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -409,7 +399,7 @@ export default function B2CBillingPage() {
                 </div>
               </div>
 
-              {/* Section: Items (border box) */}
+              {/* Items */}
               <div className="border rounded-lg p-4 mb-6 bg-white">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold">Items</h3>
@@ -421,29 +411,30 @@ export default function B2CBillingPage() {
                   </button>
                 </div>
 
-                {/* POS-style item rows */}
                 <div className="space-y-3">
                   {form.items.map((it, idx) => {
                     const rowTotal = calcRowTotal(it);
                     return (
                       <div
                         key={idx}
-                        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 rounded border"
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 border p-3 rounded"
                       >
-                        {/* Item name (flex-grow) */}
                         <input
                           type="text"
-                          placeholder="Item name"
+                          placeholder="Item Name"
                           value={it.name}
                           onChange={(e) =>
-                            updateItem(idx, "name", e.target.value)
+                            setForm((prev) => {
+                              const newItems = [...prev.items];
+                              newItems[idx].name = e.target.value;
+                              return { ...prev, items: newItems };
+                            })
                           }
                           className="flex-1 border rounded px-3 py-2"
                         />
 
-                        {/* Qty */}
                         <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600 hidden sm:block">
+                          <label className="hidden sm:block text-sm text-gray-600">
                             Qty
                           </label>
                           <input
@@ -451,21 +442,14 @@ export default function B2CBillingPage() {
                             min="0"
                             value={it.qty}
                             onChange={(e) =>
-                              updateItem(
-                                idx,
-                                "qty",
-                                e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value)
-                              )
+                              updateItem(idx, "qty", e.target.value)
                             }
                             className="w-20 border rounded px-2 py-2 text-right"
                           />
                         </div>
 
-                        {/* Price */}
                         <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600 hidden sm:block">
+                          <label className="hidden sm:block text-sm text-gray-600">
                             Price
                           </label>
                           <input
@@ -473,32 +457,19 @@ export default function B2CBillingPage() {
                             min="0"
                             value={it.price}
                             onChange={(e) =>
-                              updateItem(
-                                idx,
-                                "price",
-                                e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value)
-                              )
+                              updateItem(idx, "price", e.target.value)
                             }
                             className="w-28 border rounded px-2 py-2 text-right"
                           />
                         </div>
 
-                        {/* Row total (display only) */}
                         <div className="flex items-center gap-2 ml-auto">
-                          <div className="text-sm text-gray-600 hidden sm:block">
-                            Total
-                          </div>
                           <div className="font-medium">
                             ₹{rowTotal.toFixed(2)}
                           </div>
-
-                          {/* Delete */}
                           <button
                             onClick={() => removeItem(idx)}
-                            className="text-red-600 hover:text-red-800 ml-2"
-                            title="Remove"
+                            className="text-red-600 hover:text-red-800"
                           >
                             <Trash2 />
                           </button>
@@ -509,16 +480,10 @@ export default function B2CBillingPage() {
                 </div>
               </div>
 
-              {/* Section: Totals (border box) */}
+              {/* Total */}
               <div className="border rounded-lg p-4 mb-6 bg-white">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <h4 className="text-lg font-semibold">Total</h4>
-                    <p className="text-sm text-gray-600">
-                      Auto calculated from items
-                    </p>
-                  </div>
-
+                <div className="flex justify-between items-center">
+                  <h4 className="text-lg font-semibold">Total</h4>
                   <div className="text-2xl font-bold">
                     ₹{calcTotal().toFixed(2)}
                   </div>
@@ -526,8 +491,8 @@ export default function B2CBillingPage() {
               </div>
             </div>
 
-            {/* Footer buttons */}
-            <div className="px-6 py-4 border-t bg-white flex items-center justify-end gap-3">
+            {/* FOOTER BUTTONS */}
+            <div className="px-6 py-4 border-t bg-white flex justify-end gap-3">
               <button
                 onClick={closeModal}
                 className="px-4 py-2 bg-gray-200 rounded"
